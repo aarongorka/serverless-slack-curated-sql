@@ -1,0 +1,4 @@
+boto3==1.4.6
+BeautifulSoup4==4.6.0
+requests==2.18.4
+aws_lambda_logging==0.0.20

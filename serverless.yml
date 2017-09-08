@@ -1,0 +1,89 @@
+plugins:
+  - serverless-python-requirements
+  - serverless-log-forwarding
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+  logForwarding:
+    destinationARN: {"Fn::ImportValue": "${env:SUMOLOGIC_LAMBDA_ARN_EXPORT_NAME}"}
+
+service: MV-slack-rds
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: ${env:ENV}
+  memory: 128
+  region: ${env:AWS_REGION}
+  variableSyntax: "\\${(?!AWS::)(env:[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
+  stackTags:
+    FRAMEWORK: serverless
+  vpc:
+    securityGroupIds:
+      - "${env:AWS_SG}"
+    subnetIds:
+      - "${env:AWS_SUBNET_A}"
+  environment:
+    ENV: ${env:ENV}
+
+package:
+  exclude:
+    - .gitignore
+    - .git/**
+    - docker-compose.yml
+    - serverless.yml
+    - requirements.txt
+    - node_modules/**
+    - package.json
+    - yarn.lock
+    - Makefile
+    - README.md
+
+functions:
+  slack:
+    handler: lambda.handler
+    events:
+      - http:
+        path: /
+        method: get
+  testconnectivity:
+    handler: lambda.test_connectivity
+
+#resources:
+#  Resources:
+#    SNSTopicPolicy:
+#      Type: AWS::SNS::TopicPolicy
+#      Properties:
+#        PolicyDocument:
+#          Id: __default_policy_ID
+#          Statement:
+#          - Action:
+#            - SNS:Publish
+#            - SNS:RemovePermission
+#            - SNS:SetTopicAttributes
+#            - SNS:DeleteTopic
+#            - SNS:ListSubscriptionsByTopic
+#            - SNS:GetTopicAttributes
+#            - SNS:Receive
+#            - SNS:AddPermission
+#            - SNS:Subscribe
+#            Condition:
+#              StringEquals:
+#                AWS:SourceOwner: '${AWS::AccountId}'
+#            Effect: Allow
+#            Principal:
+#              AWS: '*'
+#            Resource:
+#              Ref: SNSTopicMVopsgeniecentreonacknowledge${env:ENV}
+#            Sid: __default_statement_ID
+#          - Action: SNS:Publish
+#            Effect: Allow
+#            Principal:
+#              AWS: arn:aws:iam::808708019265:root # OpsGenie account
+#            Resource:
+#              Ref: SNSTopicMVopsgeniecentreonacknowledge${env:ENV}
+#            Sid: __console_pub_0
+#          Version: '2008-10-17'
+#        Topics:
+#          - Ref: SNSTopicMVopsgeniecentreonacknowledge${env:ENV}

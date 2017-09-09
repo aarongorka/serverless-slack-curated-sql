@@ -13,3 +13,19 @@ services:
       - .:/code:Z
     network_mode: "none"
     working_dir: /code
+  lambda:
+    image: lambci/lambda:python3.6
+    env_file: .env
+    working_dir: /var/task
+    environment:
+      - VIRTUAL_ENV=/var/task/venv
+    volumes:
+      - ./:/var/task:Z
+  virtualenv:
+    image: lambci/lambda:build-python3.6
+    env_file: .env
+    working_dir: /usr/src/app
+    environment:
+      - VIRTUAL_ENV=/usr/src/app/venv
+    volumes:
+      - ./:/usr/src/app:Z

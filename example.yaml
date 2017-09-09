@@ -1,0 +1,5 @@
+queries:
+  getstats:
+    statement: SELECT * FROM sometable
+    mysql_host: 127.0.0.1
+    mysql_database: somedb

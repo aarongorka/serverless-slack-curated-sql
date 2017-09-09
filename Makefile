@@ -40,6 +40,15 @@ assumeRole: .env
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
 .PHONY: build deploy smoketest remove shell test assumeRole
 
+run: $(DOTENV_TARGET)
+	docker-compose run --rm lambda lambda.handler
+#	docker-compose run --rm lambda ./venv/bin/python ./handler.py
+
+deps: _venv _requirements
+	docker-compose run --rm virtualenv make _requirements
+
+.PHONY: requirements
+
 ##########
 # Others #
 ##########
@@ -66,17 +75,27 @@ $(DOTENV):
 	cp $(DOTENV) .env
 .PHONY: $(DOTENV)
 
+# Create a virtualenv
+_venv: venv
+.PHONY: _venv
+
+venv:
+	virtualenv --python=python3.6 --always-copy venv
+
+# Python requirements
+_requirements: venv/pip-selfcheck.json
+.PHONY: _requirements
+
+venv/pip-selfcheck.json: $(DOTENV_TARGET) venv/ requirements.txt
+	docker-compose run --rm virtualenv ./venv/bin/pip install -r requirements.txt
+
+# Install node_modules for serverless plugins
 _deps: node_modules
 .PHONY: _deps
 
 node_modules: package.json
 	# work around due to https://github.com/yarnpkg/yarn/issues/1961
 	yarn --no-bin-links
-
-_smokeTest:
-	sls invoke -f testconnectivity
-
-_build:
 
 _deploy:
 	rm -fr .serverless

@@ -1,5 +1,4 @@
 plugins:
-  - serverless-python-requirements
   - serverless-log-forwarding
 
 custom:
@@ -19,11 +18,11 @@ provider:
   variableSyntax: "\\${(?!AWS::)(env:[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
   stackTags:
     FRAMEWORK: serverless
-  vpc:
-    securityGroupIds:
-      - "${env:AWS_SG}"
-    subnetIds:
-      - "${env:AWS_SUBNET_A}"
+#  vpc:
+#    securityGroupIds:
+#      - "${env:AWS_SG}"
+#    subnetIds:
+#      - "${env:AWS_SUBNET_A}"
   environment:
     ENV: ${env:ENV}
 
@@ -39,16 +38,15 @@ package:
     - yarn.lock
     - Makefile
     - README.md
+    - venv/**
 
 functions:
   slack:
     handler: lambda.handler
     events:
-      - http:
-        path: /
-        method: get
-  testconnectivity:
-    handler: lambda.test_connectivity
+      - http: GET hello
+#  testconnectivity:
+#    handler: lambda.test_connectivity
 
 #resources:
 #  Resources:

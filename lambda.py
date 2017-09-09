@@ -27,7 +27,7 @@ def handler(event, context):
     except:
         pass
     logging.debug('Dumping event #1...')
-    logging.debug(json.dumps(event))
+    logging.debug(json.dumps({'event': event}))
     logging.debug('Dumping event #2...')
 
     with open("example.yml") as stream:
@@ -55,11 +55,21 @@ def handler(event, context):
             "body": body
         }
     else:
+        body = {
+		    "response_type": "in_channel",
+		    "text": "It's 80 degrees right now.",
+		    "attachments": [
+		        {
+		            "text":"Partly cloudy today and tomorrow"
+		        }
+		    ]
+		}
         response = {
-            "statusCode": 503,
-            "body": ''
+            "statusCode": 200,
+            "body": body
         }
         
+    logging.info(json.dumps({'action': 'responding', 'response': response}))
     return response
 
 

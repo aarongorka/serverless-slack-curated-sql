@@ -98,7 +98,7 @@ node_modules: package.json
 	# work around due to https://github.com/yarnpkg/yarn/issues/1961
 	yarn --no-bin-links
 
-_deploy:
+_deploy: $(ARTIFACT_PATH)
 	rm -fr .serverless
 	sls deploy -v
 

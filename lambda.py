@@ -5,6 +5,7 @@ import aws_lambda_logging
 import json
 import re
 import ruamel.yaml as yaml
+import mysql.connector
 
 
 def handler(event, context):
@@ -12,9 +13,9 @@ def handler(event, context):
 
     loglevel = os.environ.get('LOGLEVEL', 'INFO')
     logging.debug('.(setup) #1')
-    aws_lambda_logging.setup(level=loglevel)  # for some reason you have to do setup twice
-    logging.debug('.(setup) #2')
     aws_lambda_logging.setup(level=loglevel)
+    logging.debug('.(setup) #2')
+    aws_lambda_logging.setup(level=loglevel)  # for some reason you have to do setup twice
     try:
         correlation_id = context.aws_request_id
         aws_lambda_logging.setup(correlation_id=correlation_id)
@@ -28,35 +29,51 @@ def handler(event, context):
     logging.debug('Dumping event #1...')
     logging.debug(json.dumps(event))
     logging.debug('Dumping event #2...')
-#    logging.debug(event)
 
-    with open("example.yaml") as stream:
+    with open("example.yml") as stream:
         try:
-            yaml = yaml.safe_load(stream)
-            logging.debug(json.dumps(yaml))
+            config = yaml.safe_load(stream)
+            logging.debug(json.dumps(config))
         except yaml.YAMLError as e:
-            logging.exception(json.dumps({'query': 'load yaml', 'status': 'failed', 'error': str(e)}))
+            logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed', 'error': str(e)}))
 
-    if event['query']:
-        result = run_query(event['query'])
+    try:
+        if event['query']:
+            result = run_query(config['queries'][event['query']])
+    except Exception as e:
+        logging.exception(json.dumps({'action': 'running SQL query', 'status': 'failed', 'error': str(e)}))
 
-    response = format_result(result)
+    body = ""
+    try:
+        body = format_result(result)
+    except Exception as e:
+        logging.exception(json.dumps({'action': 'formatting response', 'status': 'failed', 'error': str(e)}))
 
-    response = {
-        "statusCode": 200,
-        "body": response
-    }
+    if body:
+        response = {
+            "statusCode": 200,
+            "body": body
+        }
+    else:
+        response = {
+            "statusCode": 503,
+            "body": ''
+        }
+        
     return response
 
 
 def run_query(query):
     """Takes a query from the configuration file, executes it and returns the result"""
 
-    cnx = mysql.connector.connect(
+    try:
+        cnx = mysql.connector.connect(
         user=os.environ['MYSQL_USER'], 
         password=os.environ['MYSQL_PASSWORD'], 
         database=query['mysql_host'], 
         host=query['mysql_host'])
+    except:
+        logging.exception("Failed to connect to MySQL database")
     cur = cnx.cursor(buffered=True)
     cur.execute(query['sql'])
     result = cur.fetchall()
@@ -65,7 +82,7 @@ def run_query(query):
 
 def format_result(result):
     """Formats the query results in to a format accepted by Slack"""
-
+    response = 'asdf'
     return response
 
 

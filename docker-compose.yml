@@ -16,11 +16,9 @@ services:
   lambda:
     image: lambci/lambda:python3.6
     env_file: .env
-    working_dir: /var/task
-    environment:
-      - VIRTUAL_ENV=/var/task/venv
+    working_dir: /usr/src/app
     volumes:
-      - ./:/var/task:Z
+      - ./:/usr/src/app:Z
   virtualenv:
     image: lambci/lambda:build-python3.6
     env_file: .env

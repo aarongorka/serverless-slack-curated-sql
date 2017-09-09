@@ -11,6 +11,8 @@ ifdef AWS_ROLE
 endif
 ifdef GO_PIPELINE_NAME
 	ENV_RM_REQUIRED?=rm_env
+else
+	USER_SETTINGS=--user $(shell id -u):$(shell id -g)
 endif
 
 
@@ -19,33 +21,33 @@ endif
 ################
 
 build: $(DOTENV_TARGET)
-	docker-compose run --rm serverless make _deps _build
+	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _build
 
-deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) .env $(ASSUME_REQUIRED)
-	docker-compose run --rm serverless make _deps _deploy
+deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
+	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
 smoketest: .env $(ASSUME_REQUIRED)
-	docker-compose run --rm serverless make _smokeTest
+	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest
 
 remove: $(DOTENV_TARGET)
-	docker-compose run --rm serverless make _deps _remove
-
-shell: $(DOTENV_TARGET)
-	docker-compose run --rm serverless bash
+	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _remove
 
 test: *.py .env
-	docker-compose run --rm pep8 --ignore E501 *.py
+	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
 assumeRole: .env
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
 .PHONY: build deploy smoketest remove shell test assumeRole
 
 run: $(DOTENV_TARGET)
-	docker-compose run --rm lambda lambda.handler
-#	docker-compose run --rm lambda ./venv/bin/python ./handler.py
+	docker-compose run $(USER_SETTINGS) --rm virtualenv make _run
+.PHONY: run
 
-deps: _venv _requirements
-	docker-compose run --rm virtualenv make _requirements
+shell: $(DOTENV_TARGET)
+	docker-compose run $(USER_SETTINGS) --rm virtualenv sh
+
+deps: _requirements
+	docker-compose run $(USER_SETTINGS) --rm virtualenv make _requirements
 
 .PHONY: requirements
 
@@ -68,26 +70,25 @@ dotenv:
 	@echo "Overwrite .env with $(DOTENV)"
 	cp $(DOTENV) .env
 
-$(ARTIFACT_PATH): build
-
 $(DOTENV):
 	$(info overwriting .env file with $(DOTENV))
 	cp $(DOTENV) .env
 .PHONY: $(DOTENV)
 
-# Create a virtualenv
-_venv: venv
-.PHONY: _venv
+$(PACKAGE_DIR)/pip_run: requirements.txt
+	pip install -r requirements.txt -t $(PACKAGE_DIR)
+	touch "$(PACKAGE_DIR)/pip_run"
 
-venv:
-	virtualenv --python=python3.6 --always-copy venv
+$(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/pip_run
+	cp *.py $(PACKAGE_DIR)
+	cp example.yml $(PACKAGE_DIR)
+	cd $(PACKAGE_DIR) && zip -rq ../package .
 
-# Python requirements
-_requirements: venv/pip-selfcheck.json
-.PHONY: _requirements
-
-venv/pip-selfcheck.json: $(DOTENV_TARGET) venv/ requirements.txt
-	docker-compose run --rm virtualenv ./venv/bin/pip install -r requirements.txt
+_run: $(ARTIFACT_PATH)
+	mkdir -p run/
+	cd run && unzip -qo -d . ../$(ARTIFACT_PATH)
+	cd run && /var/lang/bin/python3.6 lambda.py
+.PHONY: _run
 
 # Install node_modules for serverless plugins
 _deps: node_modules
@@ -106,5 +107,5 @@ _remove:
 	rm -fr .serverless
 
 _clean:
-	rm -fr node_modules .serverless package .requirements
+	rm -fr node_modules .serverless package .requirements venv/
 .PHONY: _deploy _remove _clean

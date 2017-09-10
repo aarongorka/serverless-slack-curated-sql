@@ -84,10 +84,13 @@ $(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/pip_run
 	cp example.yml $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
-_run: $(ARTIFACT_PATH)
+run/.lastrun: $(ARTIFACT_PATH)
 	mkdir -p run/
 	cd run && unzip -qo -d . ../$(ARTIFACT_PATH)
 	cd run && /var/lang/bin/python3.6 lambda.py
+	@touch run/.lastrun
+
+_run: run/.lastrun
 .PHONY: _run
 
 # Install node_modules for serverless plugins

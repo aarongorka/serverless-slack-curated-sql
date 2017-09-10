@@ -98,7 +98,7 @@ def lookup_alias_and_execute(selected_alias):
         response = missing_alias_message(config['queries'], selected_alias)
     else:
         result = run_query(query)
-        response = format_query_result(result)
+        response = format_query_result(result, query)
     return response
 
 
@@ -169,6 +169,7 @@ def missing_alias_message(queries, selected_alias):
 
     body = {
         "response_type": "in_channel",
+        "replace_original": False,
         "text": "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias),
         "attachments": attachments
     }
@@ -207,10 +208,50 @@ def format_response(body):
     return response
 
 
-def format_query_result(result):
+def format_query_result(result, query):
     """Formats the query results in to a format accepted by Slack"""
 
-    body = "```{}```".format(result)  # Add results as preformatted string
+    attachments = []
+    attachments.append({
+        "color": "#36a64f",
+        "callback_id": "comic_1234_xyz",
+        "mrkdwn_in": ["fields"],
+        "fields": [
+            {
+                "title": "Alias",
+                "value": query['alias'],
+                "short": True
+            },
+            {
+                "title": "SQL statement",
+                "value": query['sql'],
+                "short": False
+            },
+            {
+                "title": "MySQL Server",
+                "value": query['mysql_host'],
+                "short": True
+            },
+            {
+                "title": "Database",
+                "value": query['mysql_database'],
+                "short": True
+            },
+            {
+                "title": "Result",
+                "value": "```{}```".format(result),
+                "short": False
+            },
+
+        ],
+        "fallback": result
+    })
+    logging.debug(json.dumps({'attachments': attachments}))
+
+    body = {
+        "response_type": "in_channel",
+        "attachments": attachments
+    }
     response = format_response(body)
     return response
 

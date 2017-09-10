@@ -6,6 +6,7 @@ import json
 import re
 import ruamel.yaml as yaml
 import mysql.connector
+from urllib.parse import urlparse, parse_qs
 
 
 def handler(event, context):
@@ -17,11 +18,6 @@ def handler(event, context):
     logging.debug('.(setup) #2')
     aws_lambda_logging.setup(level=loglevel)  # for some reason you have to do setup twice
     try:
-        correlation_id = context.aws_request_id
-        aws_lambda_logging.setup(correlation_id=correlation_id)
-    except:
-        pass
-    try:
         env = os.environ.get('ENV')
         aws_lambda_logging.setup(env=env)
     except:
@@ -30,50 +26,107 @@ def handler(event, context):
     logging.debug(json.dumps({'event': event}))
     logging.debug('Dumping event #2...')
 
+    body = parse_qs(event['body'])
+
+    logging.debug(json.dumps({'body': body}))
+
+    try:
+        correlation_id = body['trigger_id'][0]  # Use correlation ID from Slack
+        logging.debug(json.dumps({'correlation_id': correlation_id}))
+        aws_lambda_logging.setup(correlation_id=correlation_id)
+    except:
+        pass
+
     with open("example.yml") as stream:
         try:
             config = yaml.safe_load(stream)
-            logging.debug(json.dumps(config))
+            logging.debug(json.dumps({'config': config}))
         except yaml.YAMLError as e:
             logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed', 'error': str(e)}))
 
-    try:
-        if event['query']:
-            result = run_query(config['queries'][event['query']])
-    except Exception as e:
-        logging.exception(json.dumps({'action': 'running SQL query', 'status': 'failed', 'error': str(e)}))
+    user_selection = body['text'][0]
 
-    body = ""
-    try:
-        body = format_result(result)
-    except Exception as e:
-        logging.exception(json.dumps({'action': 'formatting response', 'status': 'failed', 'error': str(e)}))
+    query = retrieve_query(config, user_selection)
 
-    if body:
-        response = {
-            "statusCode": 200,
-            "body": body
-        }
+    if query:
+        try:
+            result = run_query(query)
+        except Exception as e:
+            logging.exception(json.dumps({'action': 'running SQL query', 'status': 'failed', 'error': str(e)}))
+    
+        body = ""
+        try:
+            body = format_result(result)
+        except Exception as e:
+            logging.exception(json.dumps({'action': 'formatting response', 'status': 'failed', 'error': str(e)}))
     else:
+        attachments = format_attachments(config['queries'])
         body = {
-		    "response_type": "in_channel",
-		    "text": "It's 80 degrees right now.",
-		    "attachments": [
-		        {
-		            "text":"Partly cloudy today and tomorrow"
-		        }
-		    ]
-		}
-        response = {
-            "statusCode": 200,
-            "body": json.dumps(body),
-            'headers': {
-                'Content-Type': 'application/json',
-            }
+            "response_type": "in_channel",
+            "text": "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(user_selection),
+            "attachments": attachments
         }
+
+    response = {
+        "statusCode": 200,
+        "body": json.dumps(body),
+        'headers': {
+            'Content-Type': 'application/json',
+        }
+    }
         
     logging.info(json.dumps({'action': 'responding', 'response': response}))
     return response
+
+def retrieve_query(config, user_selection):
+    """Checks that the user's selection exists in the configuration file and returns the data associated with it"""
+
+    for alias in config['queries']:
+        if alias == user_selection:
+            query = [ x for x in config if config['queries'] == alias ]
+            return query
+    else:
+        logging.debug(json.dumps('The selection the user has made does not exist in the configuration file'))
+        return None
+
+def format_attachments(queries):
+    """Formats all available queries as a Slack attachment, returns an attachments object"""
+
+    attachments = []
+    for query in queries:
+        attachments.append({
+            "color": "#36a64f",
+            "fields": [
+                {
+                    "title": "Alias",
+                    "value": query['alias'],
+                    "short": True
+                },
+                {
+                    "title": "SQL statement",
+                    "value": query['sql'],
+                    "short": False
+                },
+                {
+                    "title": "MySQL Server",
+                    "value": query['mysql_host'],
+                    "short": True
+                },
+                {
+                    "title": "Database",
+                    "value": query['mysql_database'],
+                    "short": True
+                },
+                {
+                    "title": "Button",
+                    "value": "TODO",  # TODO
+                    "short": True
+                }
+            ],
+            "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
+        })
+    logging.debug(json.dumps({'attachments': attachments}))
+    return attachments
 
 
 def run_query(query):
@@ -95,8 +148,8 @@ def run_query(query):
 
 def format_result(result):
     """Formats the query results in to a format accepted by Slack"""
-    response = 'asdf'
-    return response
+    body = "```{}```".format(result)  # Add results as preformatted string
+    return body
 
 
 def main():

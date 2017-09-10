@@ -66,7 +66,10 @@ def handler(event, context):
 		}
         response = {
             "statusCode": 200,
-            "body": body
+            "body": json.dumps(body),
+            'headers': {
+                'Content-Type': 'application/json',
+            }
         }
         
     logging.info(json.dumps({'action': 'responding', 'response': response}))
@@ -97,6 +100,6 @@ def format_result(result):
 
 
 def main():
-    handler({'query': 'getstats'}, {})
+    handler(json.loads('{"resource": "/hello", "path": "/hello", "httpMethod": "POST", "headers": {"Accept": "application/json,*/*", "Accept-Encoding": "gzip,deflate", "CloudFront-Forwarded-Proto": "https", "CloudFront-Is-Desktop-Viewer": "true", "CloudFront-Is-Mobile-Viewer": "false", "CloudFront-Is-SmartTV-Viewer": "false", "CloudFront-Is-Tablet-Viewer": "false", "CloudFront-Viewer-Country": "US", "Content-Type": "application/x-www-form-urlencoded", "Host": "foobar.execute-api.ap-southeast-2.amazonaws.com", "User-Agent": "Slackbot 1.0 (+https://api.slack.com/robots)", "Via": "1.1 foobar.cloudfront.net (CloudFront)", "X-Amz-Cf-Id": "foobar", "X-Amzn-Trace-Id": "Root=footraceidbar", "X-Forwarded-For": "0.123.456.789, 0.123.456.789", "X-Forwarded-Port": "443", "X-Forwarded-Proto": "https"}, "queryStringParameters": null, "pathParameters": null, "stageVariables": null, "requestContext": {"path": "/Devaaron/hello", "accountId": "01234556678", "resourceId": "2345sd", "stage": "Devaaron", "requestId": "uuid", "identity": {"cognitoIdentityPoolId": null, "accountId": null, "cognitoIdentityId": null, "caller": null, "apiKey": "", "sourceIp": "0.123.345.123", "accessKey": null, "cognitoAuthenticationType": null, "cognitoAuthenticationProvider": null, "userArn": null, "userAgent": "Slackbot 1.0 (+https://api.slack.com/robots)", "user": null}, "resourcePath": "/hello", "httpMethod": "POST", "apiId": "asdfasd"}, "body": "token=3452345asdf&team_id=SDFSDFSDF&team_domain=asdfaq345&channel_id=345asdf&channel_name=general&user_id=2345asdfas&user_name=2345asdf&command=%2Fsql&text=asdf&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%asdfasdf&trigger_id=asdfqw45qwefasdf", "isBase64Encoded": false}'), {})
 
 if __name__ == '__main__': main()

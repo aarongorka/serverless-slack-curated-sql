@@ -23,7 +23,7 @@ endif
 build: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _build
 
-deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
+deploy: run $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
 smoketest: .env $(ASSUME_REQUIRED)

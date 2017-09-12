@@ -66,7 +66,7 @@ def handler(event, context):
         logging.exception(json.dumps({'action': 'get selected_alias', 'status': 'failed'}))
         response = {
             "statusCode": 503,
-            "body": json.dumps({"Error": "Failed to validate user's selected alias"}),
+            "body": json.dumps({"text": "Failed to validate user's selected alias"}),
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -81,7 +81,7 @@ def handler(event, context):
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 503,
-            "body": json.dumps({"Error": "Failed to execute MySQL query"}),
+            "body": json.dumps({"text": "Failed to execute MySQL query"}),
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -316,6 +316,9 @@ class ValidAliasInvalidQueryTest(unittest.TestCase):
 
     def test_response(self):
         self.assertEqual(self.response['statusCode'], 503)
+
+    def test_text(self):
+        self.assertEqual(self.body['text'], 'Failed to execute MySQL query')
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,3 +9,13 @@ queries:
     sql: SELECT * FROM billingtable
     mysql_host: 127.0.0.1
     mysql_database: somedb
+  -
+    alias: getemployees
+    sql: SELECT * FROM employees
+    mysql_host: 127.0.0.1
+    mysql_database: employees
+  -
+    alias: invalidquery
+    sql: foobar
+    mysql_host: 127.0.0.1
+    mysql_database: employees

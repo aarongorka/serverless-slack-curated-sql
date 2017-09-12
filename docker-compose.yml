@@ -14,16 +14,27 @@ services:
     network_mode: "none"
     working_dir: /code
   lambda:
+    depends_on:
+      - db
     image: lambci/lambda:python3.6
     env_file: .env
     working_dir: /usr/src/app
+    entrypoint: []
     volumes:
       - ./:/usr/src/app:Z
   virtualenv:
     image: lambci/lambda:build-python3.6
     env_file: .env
     working_dir: /usr/src/app
-    environment:
-      - VIRTUAL_ENV=/usr/src/app/venv
     volumes:
       - ./:/usr/src/app:Z
+  db:
+    image: mysql
+    container_name: mysql
+    ports:
+      - 3306:3306
+    env_file: .env
+    volumes:
+      - ./test/schema:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"

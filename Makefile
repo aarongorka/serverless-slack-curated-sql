@@ -26,30 +26,31 @@ build: $(DOTENV_TARGET)
 deploy: run $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
-smoketest: .env $(ASSUME_REQUIRED)
+unitTest: .env $(ASSUME_REQUIRED)
+	docker-compose run $(USER_SETTINGS) --rm lambda make _run
+
+smokeTest: .env $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest
 
 remove: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _remove
 
-test: *.py .env
+styleTest: *.py .env
 	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
 assumeRole: .env
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
-.PHONY: build deploy smoketest remove shell test assumeRole
+.PHONY: build deploy smokeTest remove shell styleTest assumeRole
 
-run: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm virtualenv make _run
-.PHONY: run
+test: $(DOTENV_TARGET) styleTest unitTest
+.PHONY: test
 
 shell: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv sh
 
 deps: _requirements
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _requirements
-
-.PHONY: requirements
+.PHONY: deps
 
 ##########
 # Others #
@@ -87,7 +88,7 @@ $(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/pip_run
 run/.lastrun: $(ARTIFACT_PATH)
 	mkdir -p run/
 	cd run && unzip -qo -d . ../$(ARTIFACT_PATH)
-	cd run && /var/lang/bin/python3.6 lambda.py
+	cd run && ./lambda.py
 	@touch run/.lastrun
 
 _run: run/.lastrun

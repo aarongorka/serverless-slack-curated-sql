@@ -35,7 +35,10 @@ smokeTest: .env $(ASSUME_REQUIRED)
 remove: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _remove
 
-styleTest: *.py .env
+unzip:
+	docker-compose run $(USER_SETTINGS) --rm virtualenv make _unzip
+
+styleTest: *.py .env unzip
 	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
 assumeRole: .env
@@ -76,18 +79,23 @@ $(DOTENV):
 	cp $(DOTENV) .env
 .PHONY: $(DOTENV)
 
-$(PACKAGE_DIR)/pip_run: requirements.txt
+$(PACKAGE_DIR)/.piprun: requirements.txt
 	pip install -r requirements.txt -t $(PACKAGE_DIR)
-	touch "$(PACKAGE_DIR)/pip_run"
+	@touch "$(PACKAGE_DIR)/.piprun"
 
-$(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/pip_run
+$(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/.piprun
 	cp *.py $(PACKAGE_DIR)
 	cp example.yml $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
-run/.lastrun: $(ARTIFACT_PATH)
+run/lambda.py: $(ARTIFACT_PATH)
 	mkdir -p run/
 	cd run && unzip -qo -d . ../$(ARTIFACT_PATH)
+	@touch run/lambda.py
+
+_unzip: run/lambda.py
+
+run/.lastrun: $(ARTIFACT_PATH)
 	cd run && ./lambda.py
 	@touch run/.lastrun
 

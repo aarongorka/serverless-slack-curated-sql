@@ -13,7 +13,8 @@ provider:
   name: aws
   runtime: python3.6
   stage: ${env:ENV}
-  memory: 128
+  memorySize: 128
+  timeout: 10
   region: ${env:AWS_REGION}
   variableSyntax: "\\${(?!AWS::)(env:[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
   stackTags:

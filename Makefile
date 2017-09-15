@@ -26,16 +26,16 @@ build: $(DOTENV_TARGET)
 deploy: run $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
-unitTest: .env $(ASSUME_REQUIRED)
-	docker-compose run $(USER_SETTINGS) --rm lambda make _run
+unitTest: $(ASSUME_REQUIRED) *.py $(DOTENV_TARGET) unzip run/lambda.py run/example.yml 
+	docker-compose up test
 
-smokeTest: .env $(ASSUME_REQUIRED)
+smokeTest: $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest
 
 remove: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _remove
 
-unzip:
+unzip: $(DOTENV_TARGET) $(ARTIFACT_PATH)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _unzip
 
 styleTest: *.py .env unzip
@@ -45,7 +45,7 @@ assumeRole: .env
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
 .PHONY: build deploy smokeTest remove shell styleTest assumeRole
 
-test: $(DOTENV_TARGET) styleTest unitTest
+test: $(DOTENV_TARGET) unitTest styleTest
 .PHONY: test
 
 shell: $(DOTENV_TARGET)
@@ -84,23 +84,24 @@ $(PACKAGE_DIR)/.piprun: requirements.txt
 	@touch "$(PACKAGE_DIR)/.piprun"
 
 $(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/.piprun
-	cp *.py $(PACKAGE_DIR)
+	cp lambda.py $(PACKAGE_DIR)
 	cp example.yml $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .
+
+run/example.yml: run/lambda.py
 
 run/lambda.py: $(ARTIFACT_PATH)
 	mkdir -p run/
 	cd run && unzip -qo -d . ../$(ARTIFACT_PATH)
-	@touch run/lambda.py
+#	@touch run/lambda.py
 
 _unzip: run/lambda.py
 
 run/.lastrun: $(ARTIFACT_PATH)
 	cd run && ./lambda.py
-	@touch run/.lastrun
+#	@touch run/.lastrun
 
 _run: run/.lastrun
-.PHONY: _run
 
 # Install node_modules for serverless plugins
 _deps: node_modules

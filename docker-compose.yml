@@ -16,25 +16,59 @@ services:
   lambda:
     depends_on:
       - db
+    links:
+      - db:db
     image: lambci/lambda:python3.6
     env_file: .env
     working_dir: /usr/src/app
     entrypoint: []
     volumes:
       - ./:/usr/src/app:Z
-  virtualenv:
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://127.0.0.1:9001"
+  test:
+    depends_on:
+      - db
+    links:
+      - db:db
     image: lambci/lambda:build-python3.6
     env_file: .env
     working_dir: /usr/src/app
+    entrypoint: []
+    command: ["make", "_run"]
     volumes:
       - ./:/usr/src/app:Z
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+  virtualenv:
+    depends_on:
+      - db
+    links:
+      - db:db
+    image: lambci/lambda:build-python3.6
+    env_file: .env
+    working_dir: /usr/src/app
+    entrypoint: []
+    volumes:
+      - ./:/usr/src/app:Z
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "logger-test"
   db:
     image: mysql
-    container_name: mysql
     ports:
       - 3306:3306
     env_file: .env
     volumes:
-      - ./test/schema:/docker-entrypoint-initdb.d
+      - ~/schema:/docker-entrypoint-initdb.d:Z
+      - db_data:/var/lib/mysql:Z
     ports:
       - "3306:3306"
+volumes:
+    db_data:

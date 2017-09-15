@@ -11,11 +11,11 @@ queries:
     mysql_database: somedb
   -
     alias: getemployees
-    sql: SELECT * FROM employees
-    mysql_host: 127.0.0.1
-    mysql_database: employees
+    sql: 'SELECT * FROM address LIMIT 5;'
+    mysql_host: db
+    mysql_database: sakila
   -
     alias: invalidquery
     sql: foobar
-    mysql_host: 127.0.0.1
-    mysql_database: employees
+    mysql_host: db
+    mysql_database: sakila

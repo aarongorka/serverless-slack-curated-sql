@@ -7,6 +7,7 @@ import re
 import ruamel.yaml as yaml
 import mysql.connector
 from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlencode, quote_plus
 import unittest
 from timeit import default_timer as timer
 import time
@@ -399,8 +400,62 @@ class InvalidMessageTest(unittest.TestCase):
 
 class ValidAliasTest(unittest.TestCase):
     def setUp(self):
+        event = {'resource': '/command',
+            'path': '/command',
+            'httpMethod': 'POST',
+            'headers': {'Accept': 'application/json,*/*',
+                'Accept-Encoding': 'gzip,deflate',
+                'CloudFront-Forwarded-Proto': 'https',
+                'CloudFront-Is-Desktop-Viewer': 'true',
+                'CloudFront-Is-Mobile-Viewer': 'false',
+                'CloudFront-Is-SmartTV-Viewer': 'false',
+                'CloudFront-Is-Tablet-Viewer': 'false',
+                'CloudFront-Viewer-Country': 'US',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Host': '8bixd3am45.execute-api.ap-southeast-2.amazonaws.com',
+                'User-Agent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                'Via': '1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)',
+                'X-Amz-Cf-Id': 'TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==',
+                'X-Amzn-Trace-Id': 'Root=1-59b4e895-024869162e9972bf6b358970',
+                'X-Forwarded-For': '54.209.231.248, 54.182.230.57',
+                'X-Forwarded-Port': '443',
+                'X-Forwarded-Proto': 'https'},
+            'queryStringParameters': None,
+            'pathParameters': None,
+            'stageVariables': None,
+            'requestContext': {'path': '/Devaaron/command',
+                'accountId': '979598289034',
+                'resourceId': 'i5luku',
+                'stage': 'Devaaron',
+                'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
+                'identity': {'cognitoIdentityPoolId': None,
+                    'accountId': None,
+                    'cognitoIdentityId': None,
+                    'caller': None,
+                    'apiKey': '',
+                    'sourceIp': '54.209.231.248',
+                    'accessKey': None,
+                    'cognitoAuthenticationType': None,
+                    'cognitoAuthenticationProvider': None,
+                    'userArn': None,
+                    'userAgent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                    'user': None},
+                'resourcePath': '/command',
+                'httpMethod': 'POST',
+                'apiId': '8bixd3am45'},
+            'body': urlencode({'token': 'UKN4Z6UE5',
+                'team_id': 'T704EFPPF',
+                'team_domain': 'aarongorka',
+                'channel_id': 'C704EFSF7',
+                'channel_name': 'general',
+                'user_id': 'U6ZAMUH7S',
+                'user_name': 'aarongorka',
+                'command': '/sql',
+                'text': 'getemployees',
+                'response_url': 'https://hooks.slack.com/commands/T704EFPPF/239872535367/4ERft7zrhxf5c0YtZpWSXeqk',
+                'trigger_id': 'ValidAliasTest'}),
+            'isBase64Encoded': False}
         logging.debug(json.dumps({"action": "setting up new test ValidAliasTest"}))
-        event = json.loads('{"resource": "/command", "path": "/command", "httpMethod": "POST", "headers": {"Accept": "application/json,*/*", "Accept-Encoding": "gzip,deflate", "CloudFront-Forwarded-Proto": "https", "CloudFront-Is-Desktop-Viewer": "true", "CloudFront-Is-Mobile-Viewer": "false", "CloudFront-Is-SmartTV-Viewer": "false", "CloudFront-Is-Tablet-Viewer": "false", "CloudFront-Viewer-Country": "US", "Content-Type": "application/x-www-form-urlencoded", "Host": "8bixd3am45.execute-api.ap-southeast-2.amazonaws.com", "User-Agent": "Slackbot 1.0 (+https://api.slack.com/robots)", "Via": "1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)", "X-Amz-Cf-Id": "TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==", "X-Amzn-Trace-Id": "Root=1-59b4e895-024869162e9972bf6b358970", "X-Forwarded-For": "54.209.231.248, 54.182.230.57", "X-Forwarded-Port": "443", "X-Forwarded-Proto": "https"}, "queryStringParameters": null, "pathParameters": null, "stageVariables": null, "requestContext": {"path": "/Devaaron/command", "accountId": "979598289034", "resourceId": "i5luku", "stage": "Devaaron", "requestId": "071aeddc-95f9-11e7-8cd9-7ff34cfce32b", "identity": {"cognitoIdentityPoolId": null, "accountId": null, "cognitoIdentityId": null, "caller": null, "apiKey": "", "sourceIp": "54.209.231.248", "accessKey": null, "cognitoAuthenticationType": null, "cognitoAuthenticationProvider": null, "userArn": null, "userAgent": "Slackbot 1.0 (+https://api.slack.com/robots)", "user": null}, "resourcePath": "/command", "httpMethod": "POST", "apiId": "8bixd3am45"}, "body": "token=UKN4Z6UE5&team_id=T704EFPPF&team_domain=aarongorka&channel_id=C704EFSF7&channel_name=general&user_id=U6ZAMUH7S&user_name=aarongorka&command=%2Fsql&text=getemployees&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT704EFPPF%2F239872535367%2F4ERft7zrhxf5c0YtZpWSXeqk&trigger_id=ValidAliasTest", "isBase64Encoded": false}')
         self.response = handler(event, {})
         self.body = json.loads(self.response['body'])
 
@@ -422,8 +477,62 @@ class ValidAliasTest(unittest.TestCase):
 
 class ValidAliasInvalidQueryTest(unittest.TestCase):
     def setUp(self):
+        event = {'resource': '/command',
+            'path': '/command',
+            'httpMethod': 'POST',
+            'headers': {'Accept': 'application/json,*/*',
+                'Accept-Encoding': 'gzip,deflate',
+                'CloudFront-Forwarded-Proto': 'https',
+                'CloudFront-Is-Desktop-Viewer': 'true',
+                'CloudFront-Is-Mobile-Viewer': 'false',
+                'CloudFront-Is-SmartTV-Viewer': 'false',
+                'CloudFront-Is-Tablet-Viewer': 'false',
+                'CloudFront-Viewer-Country': 'US',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Host': '8bixd3am45.execute-api.ap-southeast-2.amazonaws.com',
+                'User-Agent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                'Via': '1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)',
+                'X-Amz-Cf-Id': 'TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==',
+                'X-Amzn-Trace-Id': 'Root=1-59b4e895-024869162e9972bf6b358970',
+                'X-Forwarded-For': '54.209.231.248, 54.182.230.57',
+                'X-Forwarded-Port': '443',
+                'X-Forwarded-Proto': 'https'},
+            'queryStringParameters': None,
+            'pathParameters': None,
+            'stageVariables': None,
+            'requestContext': {'path': '/Devaaron/command',
+                'accountId': '979598289034',
+                'resourceId': 'i5luku',
+                'stage': 'Devaaron',
+                'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
+                'identity': {'cognitoIdentityPoolId': None,
+                    'accountId': None,
+                    'cognitoIdentityId': None,
+                    'caller': None,
+                    'apiKey': '',
+                    'sourceIp': '54.209.231.248',
+                    'accessKey': None,
+                    'cognitoAuthenticationType': None,
+                    'cognitoAuthenticationProvider': None,
+                    'userArn': None,
+                    'userAgent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                    'user': None},
+                'resourcePath': '/command',
+                'httpMethod': 'POST',
+                'apiId': '8bixd3am45'},
+            'body': urlencode({'token': 'UKN4Z6UE5',
+                'team_id': 'T704EFPPF',
+                'team_domain': 'aarongorka',
+                'channel_id': 'C704EFSF7',
+                'channel_name': 'general',
+                'user_id': 'U6ZAMUH7S',
+                'user_name': 'aarongorka',
+                'command': '/sql',
+                'text': 'invalidquery',
+                'response_url': 'https://hooks.slack.com/commands/T704EFPPF/239872535367/4ERft7zrhxf5c0YtZpWSXeqk',
+                'trigger_id': 'ValidAliasTest'}),
+            'isBase64Encoded': False}
         logging.debug(json.dumps({"action": "setting up new test ValidAliasInvalidQueryTest"}))
-        event = json.loads('{"resource": "/command", "path": "/command", "httpMethod": "POST", "headers": {"Accept": "application/json,*/*", "Accept-Encoding": "gzip,deflate", "CloudFront-Forwarded-Proto": "https", "CloudFront-Is-Desktop-Viewer": "true", "CloudFront-Is-Mobile-Viewer": "false", "CloudFront-Is-SmartTV-Viewer": "false", "CloudFront-Is-Tablet-Viewer": "false", "CloudFront-Viewer-Country": "US", "Content-Type": "application/x-www-form-urlencoded", "Host": "8bixd3am45.execute-api.ap-southeast-2.amazonaws.com", "User-Agent": "Slackbot 1.0 (+https://api.slack.com/robots)", "Via": "1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)", "X-Amz-Cf-Id": "TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==", "X-Amzn-Trace-Id": "Root=1-59b4e895-024869162e9972bf6b358970", "X-Forwarded-For": "54.209.231.248, 54.182.230.57", "X-Forwarded-Port": "443", "X-Forwarded-Proto": "https"}, "queryStringParameters": null, "pathParameters": null, "stageVariables": null, "requestContext": {"path": "/Devaaron/command", "accountId": "979598289034", "resourceId": "i5luku", "stage": "Devaaron", "requestId": "071aeddc-95f9-11e7-8cd9-7ff34cfce32b", "identity": {"cognitoIdentityPoolId": null, "accountId": null, "cognitoIdentityId": null, "caller": null, "apiKey": "", "sourceIp": "54.209.231.248", "accessKey": null, "cognitoAuthenticationType": null, "cognitoAuthenticationProvider": null, "userArn": null, "userAgent": "Slackbot 1.0 (+https://api.slack.com/robots)", "user": null}, "resourcePath": "/command", "httpMethod": "POST", "apiId": "8bixd3am45"}, "body": "token=UKN4Z6UE5&team_id=T704EFPPF&team_domain=aarongorka&channel_id=C704EFSF7&channel_name=general&user_id=U6ZAMUH7S&user_name=aarongorka&command=%2Fsql&text=invalidquery&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT704EFPPF%2F239872535367%2F4ERft7zrhxf5c0YtZpWSXeqk&trigger_id=ValidAliasInvalidQueryTest", "isBase64Encoded": false}')
         self.response = handler(event, {})
         self.body = json.loads(self.response['body'])
 

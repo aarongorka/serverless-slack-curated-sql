@@ -313,7 +313,6 @@ def format_query_result(result, query):
                 row[item] = str(row[item])
             except:
                 pass
-#        logging.debug(json.dumps({'row': row}))
         rows.append(row)
 
     table = format_table(rows)
@@ -365,7 +364,61 @@ def format_query_result(result, query):
 class MissingAliasTest(unittest.TestCase):
     def setUp(self):
         logging.debug(json.dumps({"action": "setting up new test MissingAliasTest"}))
-        event = json.loads('{"resource": "/command", "path": "/command", "httpMethod": "POST", "headers": {"Accept": "application/json,*/*", "Accept-Encoding": "gzip,deflate", "CloudFront-Forwarded-Proto": "https", "CloudFront-Is-Desktop-Viewer": "true", "CloudFront-Is-Mobile-Viewer": "false", "CloudFront-Is-SmartTV-Viewer": "false", "CloudFront-Is-Tablet-Viewer": "false", "CloudFront-Viewer-Country": "US", "Content-Type": "application/x-www-form-urlencoded", "Host": "8bixd3am45.execute-api.ap-southeast-2.amazonaws.com", "User-Agent": "Slackbot 1.0 (+https://api.slack.com/robots)", "Via": "1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)", "X-Amz-Cf-Id": "TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==", "X-Amzn-Trace-Id": "Root=1-59b4e895-024869162e9972bf6b358970", "X-Forwarded-For": "54.209.231.248, 54.182.230.57", "X-Forwarded-Port": "443", "X-Forwarded-Proto": "https"}, "queryStringParameters": null, "pathParameters": null, "stageVariables": null, "requestContext": {"path": "/Devaaron/command", "accountId": "979598289034", "resourceId": "i5luku", "stage": "Devaaron", "requestId": "071aeddc-95f9-11e7-8cd9-7ff34cfce32b", "identity": {"cognitoIdentityPoolId": null, "accountId": null, "cognitoIdentityId": null, "caller": null, "apiKey": "", "sourceIp": "54.209.231.248", "accessKey": null, "cognitoAuthenticationType": null, "cognitoAuthenticationProvider": null, "userArn": null, "userAgent": "Slackbot 1.0 (+https://api.slack.com/robots)", "user": null}, "resourcePath": "/command", "httpMethod": "POST", "apiId": "8bixd3am45"}, "body": "token=UKN4Z6UE5&team_id=T704EFPPF&team_domain=aarongorka&channel_id=C704EFSF7&channel_name=general&user_id=U6ZAMUH7S&user_name=aarongorka&command=%2Fsql&text=asdf&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT704EFPPF%2F239872535367%2F4ERft7zrhxf5c0YtZpWSXeqk&trigger_id=MissingAliasTest", "isBase64Encoded": false}')
+        event = {'resource': '/command',
+            'path': '/command',
+            'httpMethod': 'POST',
+            'headers': {'Accept': 'application/json,*/*',
+                'Accept-Encoding': 'gzip,deflate',
+                'CloudFront-Forwarded-Proto': 'https',
+                'CloudFront-Is-Desktop-Viewer': 'true',
+                'CloudFront-Is-Mobile-Viewer': 'false',
+                'CloudFront-Is-SmartTV-Viewer': 'false',
+                'CloudFront-Is-Tablet-Viewer': 'false',
+                'CloudFront-Viewer-Country': 'US',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Host': '8bixd3am45.execute-api.ap-southeast-2.amazonaws.com',
+                'User-Agent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                'Via': '1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)',
+                'X-Amz-Cf-Id': 'TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==',
+                'X-Amzn-Trace-Id': 'Root=1-59b4e895-024869162e9972bf6b358970',
+                'X-Forwarded-For': '54.209.231.248, 54.182.230.57',
+                'X-Forwarded-Port': '443',
+                'X-Forwarded-Proto': 'https'},
+            'queryStringParameters': None,
+            'pathParameters': None,
+            'stageVariables': None,
+            'requestContext': {'path': '/Devaaron/command',
+                'accountId': '979598289034',
+                'resourceId': 'i5luku',
+                'stage': 'Devaaron',
+                'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
+                'identity': {'cognitoIdentityPoolId': None,
+                    'accountId': None,
+                    'cognitoIdentityId': None,
+                    'caller': None,
+                    'apiKey': '',
+                    'sourceIp': '54.209.231.248',
+                    'accessKey': None,
+                    'cognitoAuthenticationType': None,
+                    'cognitoAuthenticationProvider': None,
+                    'userArn': None,
+                    'userAgent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                    'user': None},
+                'resourcePath': '/command',
+                'httpMethod': 'POST',
+                'apiId': '8bixd3am45'},
+            'body': urlencode({'token': 'UKN4Z6UE5',
+                'team_id': 'T704EFPPF',
+                'team_domain': 'aarongorka',
+                'channel_id': 'C704EFSF7',
+                'channel_name': 'general',
+                'user_id': 'U6ZAMUH7S',
+                'user_name': 'aarongorka',
+                'command': '/sql',
+                'text': 'missingalias',
+                'response_url': 'https://hooks.slack.com/commands/T704EFPPF/239872535367/4ERft7zrhxf5c0YtZpWSXeqk',
+                'trigger_id': 'ValidAliasTest'}),
+            'isBase64Encoded': False}
         self.response = handler(event, {})
         self.body = json.loads(self.response['body'])
 
@@ -373,24 +426,68 @@ class MissingAliasTest(unittest.TestCase):
         self.assertEqual(self.response['statusCode'], 200)
 
     def test_text(self):
-        self.assertEqual(self.body['text'], 'The alias `asdf` doesn\'t exist. Here are the available aliases you may call:')
+        self.assertEqual(self.body['text'], 'The alias `missingalias` doesn\'t exist. Here are the available aliases you may call:')
 
     def test_field_0(self):
         attachments = self.body['attachments']
-        fields = [ x["fields"] for x in attachments ]
+        fields = [x["fields"] for x in attachments]
         logging.debug(json.dumps({'fields': fields}))
-        titles = [ x[0]["title"] for x in fields]
+        titles = [x[0]["title"] for x in fields]
         logging.debug(json.dumps({'titles': titles}))
-        values = [ x[0]["value"] for x in fields]
+        values = [x[0]["value"] for x in fields]
         logging.debug(json.dumps({'values': values}))
 
         self.assertTrue("Alias" in titles)
-        self.assertTrue("getstats" in values)
+        self.assertTrue("getemployees" in values)
 
 
 class InvalidMessageTest(unittest.TestCase):
     def setUp(self):
-        event = json.loads('{"resource": "/command", "path": "/command", "httpMethod": "POST", "headers": {"Accept": "application/json,*/*", "Accept-Encoding": "gzip,deflate", "CloudFront-Forwarded-Proto": "https", "CloudFront-Is-Desktop-Viewer": "true", "CloudFront-Is-Mobile-Viewer": "false", "CloudFront-Is-SmartTV-Viewer": "false", "CloudFront-Is-Tablet-Viewer": "false", "CloudFront-Viewer-Country": "US", "Content-Type": "application/x-www-form-urlencoded", "Host": "8bixd3am45.execute-api.ap-southeast-2.amazonaws.com", "User-Agent": "Slackbot 1.0 (+https://api.slack.com/robots)", "Via": "1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)", "X-Amz-Cf-Id": "TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==", "X-Amzn-Trace-Id": "Root=1-59b4e895-024869162e9972bf6b358970", "X-Forwarded-For": "54.209.231.248, 54.182.230.57", "X-Forwarded-Port": "443", "X-Forwarded-Proto": "https"}, "queryStringParameters": null, "pathParameters": null, "stageVariables": null, "requestContext": {"path": "asdfasdfasdfasdf"}, "body": "asdfasdf_asdfasdfaslfkasdfl%asdf##asdf", "isBase64Encoded": false}')
+        event = {'resource': '/command',
+            'path': '/command',
+            'httpMethod': 'POST',
+            'headers': {'Accept': 'application/json,*/*',
+                'Accept-Encoding': 'gzip,deflate',
+                'CloudFront-Forwarded-Proto': 'https',
+                'CloudFront-Is-Desktop-Viewer': 'true',
+                'CloudFront-Is-Mobile-Viewer': 'false',
+                'CloudFront-Is-SmartTV-Viewer': 'false',
+                'CloudFront-Is-Tablet-Viewer': 'false',
+                'CloudFront-Viewer-Country': 'US',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Host': '8bixd3am45.execute-api.ap-southeast-2.amazonaws.com',
+                'User-Agent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                'Via': '1.1 a0dce0e49d06dce2c392604440772209.cloudfront.net (CloudFront)',
+                'X-Amz-Cf-Id': 'TL3kJqaV6y7kXC6hkru8zOJZzGXBX13rQ-0tc34hlabd-K18qKLVFg==',
+                'X-Amzn-Trace-Id': 'Root=1-59b4e895-024869162e9972bf6b358970',
+                'X-Forwarded-For': '54.209.231.248, 54.182.230.57',
+                'X-Forwarded-Port': '443',
+                'X-Forwarded-Proto': 'https'},
+            'queryStringParameters': None,
+            'pathParameters': None,
+            'stageVariables': None,
+            'requestContext': {'path': '/Devaaron/command',
+                'accountId': '979598289034',
+                'resourceId': 'i5luku',
+                'stage': 'Devaaron',
+                'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
+                'identity': {'cognitoIdentityPoolId': None,
+                    'accountId': None,
+                    'cognitoIdentityId': None,
+                    'caller': None,
+                    'apiKey': '',
+                    'sourceIp': '54.209.231.248',
+                    'accessKey': None,
+                    'cognitoAuthenticationType': None,
+                    'cognitoAuthenticationProvider': None,
+                    'userArn': None,
+                    'userAgent': 'Slackbot 1.0 (+https://api.slack.com/robots)',
+                    'user': None},
+                'resourcePath': '/command',
+                'httpMethod': 'POST',
+                'apiId': '8bixd3am45'},
+            'body': 'Invaild body',
+            'isBase64Encoded': False}
         logging.debug(json.dumps({"action": "setting up new test InvalidMessageTest"}))
         self.response = handler(event, {})
 
@@ -464,11 +561,11 @@ class ValidAliasTest(unittest.TestCase):
 
     def test_text(self):
         attachments = self.body['attachments']
-        fields = [ x["fields"] for x in attachments ]
+        fields = [x["fields"] for x in attachments]
         logging.debug(json.dumps({'fields': fields, 'action': 'logging fields'}))
-        titles = [ x["title"] for x in fields[0] ]
+        titles = [x["title"] for x in fields[0]]
         logging.debug(json.dumps({'titles': titles, 'action': 'logging titles'}))
-        values = [ x["value"] for x in fields[0] ]
+        values = [x["value"] for x in fields[0]]
         logging.debug(json.dumps({'values': values, 'action': 'logging values'}))
 
         self.assertTrue("Result" in titles)
@@ -549,8 +646,6 @@ class MysqlConnectivityTest(unittest.TestCase):
         start = timer()
         attempts = 0
         connected = False
-#        logging.debug(json.dumps({"action": "sleeping"}))
-#        time.sleep(6)
         while not connected:
             try:
                 logging.debug(json.dumps({"action": "trying to connect to MySQL"}))

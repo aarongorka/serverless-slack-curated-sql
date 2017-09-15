@@ -18,6 +18,7 @@ from pprint import pprint
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
 
+
 def button_handler(event, context):
     """Handler for button events"""
 
@@ -233,7 +234,7 @@ def run_query(query):
     while not connected:
         try:
             cnx = mysql.connector.connect(
-                charset = 'utf8',
+                charset='utf8',
                 connect_timeout=20,
                 user=os.environ['MYSQL_USER'],
                 password=os.environ['MYSQL_PASSWORD'],
@@ -287,12 +288,12 @@ def format_table(myDict, colList=None):
     table = ""
     if not colList:
         colList = list(myDict[0].keys() if myDict else [])
-    myList = [colList] # 1st row = header
+    myList = [colList]  # 1st row = header
     for item in myDict:
         myList.append([str(item[col] or '') for col in colList])
-    colSize = [max(map(len,col)) for col in zip(*myList)]
+    colSize = [max(map(len, col)) for col in zip(*myList)]
     formatStr = ' | '.join(["{{:<{}}}".format(i) for i in colSize])
-    myList.insert(1, ['-' * i for i in colSize]) # Seperating line
+    myList.insert(1, ['-' * i for i in colSize])  # Seperating line
     for item in myList:
         table = table + formatStr.format(*item) + "\n"
     return table
@@ -306,7 +307,7 @@ def format_query_result(result, query):
     for row in result:
         for item in row:
             try:
-                row[item] = row[item].decode('ascii','ignore')
+                row[item] = row[item].decode('ascii', 'ignore')
             except:
                 pass
             try:
@@ -364,10 +365,12 @@ def format_query_result(result, query):
 class MissingAliasTest(unittest.TestCase):
     def setUp(self):
         logging.debug(json.dumps({"action": "setting up new test MissingAliasTest"}))
-        event = {'resource': '/command',
+        event = {
+            'resource': '/command',
             'path': '/command',
             'httpMethod': 'POST',
-            'headers': {'Accept': 'application/json,*/*',
+            'headers': {
+                'Accept': 'application/json,*/*',
                 'Accept-Encoding': 'gzip,deflate',
                 'CloudFront-Forwarded-Proto': 'https',
                 'CloudFront-Is-Desktop-Viewer': 'true',
@@ -387,12 +390,14 @@ class MissingAliasTest(unittest.TestCase):
             'queryStringParameters': None,
             'pathParameters': None,
             'stageVariables': None,
-            'requestContext': {'path': '/Devaaron/command',
+            'requestContext': {
+                'path': '/Devaaron/command',
                 'accountId': '979598289034',
                 'resourceId': 'i5luku',
                 'stage': 'Devaaron',
                 'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
-                'identity': {'cognitoIdentityPoolId': None,
+                'identity': {
+                    'cognitoIdentityPoolId': None,
                     'accountId': None,
                     'cognitoIdentityId': None,
                     'caller': None,
@@ -407,7 +412,8 @@ class MissingAliasTest(unittest.TestCase):
                 'resourcePath': '/command',
                 'httpMethod': 'POST',
                 'apiId': '8bixd3am45'},
-            'body': urlencode({'token': 'UKN4Z6UE5',
+            'body': urlencode({
+                'token': 'UKN4Z6UE5',
                 'team_id': 'T704EFPPF',
                 'team_domain': 'aarongorka',
                 'channel_id': 'C704EFSF7',
@@ -443,10 +449,12 @@ class MissingAliasTest(unittest.TestCase):
 
 class InvalidMessageTest(unittest.TestCase):
     def setUp(self):
-        event = {'resource': '/command',
+        event = {
+            'resource': '/command',
             'path': '/command',
             'httpMethod': 'POST',
-            'headers': {'Accept': 'application/json,*/*',
+            'headers': {
+                'Accept': 'application/json,*/*',
                 'Accept-Encoding': 'gzip,deflate',
                 'CloudFront-Forwarded-Proto': 'https',
                 'CloudFront-Is-Desktop-Viewer': 'true',
@@ -466,12 +474,14 @@ class InvalidMessageTest(unittest.TestCase):
             'queryStringParameters': None,
             'pathParameters': None,
             'stageVariables': None,
-            'requestContext': {'path': '/Devaaron/command',
+            'requestContext': {
+                'path': '/Devaaron/command',
                 'accountId': '979598289034',
                 'resourceId': 'i5luku',
                 'stage': 'Devaaron',
                 'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
-                'identity': {'cognitoIdentityPoolId': None,
+                'identity': {
+                    'cognitoIdentityPoolId': None,
                     'accountId': None,
                     'cognitoIdentityId': None,
                     'caller': None,
@@ -497,10 +507,12 @@ class InvalidMessageTest(unittest.TestCase):
 
 class ValidAliasTest(unittest.TestCase):
     def setUp(self):
-        event = {'resource': '/command',
+        event = {
+            'resource': '/command',
             'path': '/command',
             'httpMethod': 'POST',
-            'headers': {'Accept': 'application/json,*/*',
+            'headers': {
+                'Accept': 'application/json,*/*',
                 'Accept-Encoding': 'gzip,deflate',
                 'CloudFront-Forwarded-Proto': 'https',
                 'CloudFront-Is-Desktop-Viewer': 'true',
@@ -520,12 +532,14 @@ class ValidAliasTest(unittest.TestCase):
             'queryStringParameters': None,
             'pathParameters': None,
             'stageVariables': None,
-            'requestContext': {'path': '/Devaaron/command',
+            'requestContext': {
+                'path': '/Devaaron/command',
                 'accountId': '979598289034',
                 'resourceId': 'i5luku',
                 'stage': 'Devaaron',
                 'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
-                'identity': {'cognitoIdentityPoolId': None,
+                'identity': {
+                    'cognitoIdentityPoolId': None,
                     'accountId': None,
                     'cognitoIdentityId': None,
                     'caller': None,
@@ -540,7 +554,8 @@ class ValidAliasTest(unittest.TestCase):
                 'resourcePath': '/command',
                 'httpMethod': 'POST',
                 'apiId': '8bixd3am45'},
-            'body': urlencode({'token': 'UKN4Z6UE5',
+            'body': urlencode({
+                'token': 'UKN4Z6UE5',
                 'team_id': 'T704EFPPF',
                 'team_domain': 'aarongorka',
                 'channel_id': 'C704EFSF7',
@@ -574,10 +589,12 @@ class ValidAliasTest(unittest.TestCase):
 
 class ValidAliasInvalidQueryTest(unittest.TestCase):
     def setUp(self):
-        event = {'resource': '/command',
+        event = {
+            'resource': '/command',
             'path': '/command',
             'httpMethod': 'POST',
-            'headers': {'Accept': 'application/json,*/*',
+            'headers': {
+                'Accept': 'application/json,*/*',
                 'Accept-Encoding': 'gzip,deflate',
                 'CloudFront-Forwarded-Proto': 'https',
                 'CloudFront-Is-Desktop-Viewer': 'true',
@@ -597,12 +614,14 @@ class ValidAliasInvalidQueryTest(unittest.TestCase):
             'queryStringParameters': None,
             'pathParameters': None,
             'stageVariables': None,
-            'requestContext': {'path': '/Devaaron/command',
+            'requestContext': {
+                'path': '/Devaaron/command',
                 'accountId': '979598289034',
                 'resourceId': 'i5luku',
                 'stage': 'Devaaron',
                 'requestId': '071aeddc-95f9-11e7-8cd9-7ff34cfce32b',
-                'identity': {'cognitoIdentityPoolId': None,
+                'identity': {
+                    'cognitoIdentityPoolId': None,
                     'accountId': None,
                     'cognitoIdentityId': None,
                     'caller': None,
@@ -617,7 +636,8 @@ class ValidAliasInvalidQueryTest(unittest.TestCase):
                 'resourcePath': '/command',
                 'httpMethod': 'POST',
                 'apiId': '8bixd3am45'},
-            'body': urlencode({'token': 'UKN4Z6UE5',
+            'body': urlencode({
+                'token': 'UKN4Z6UE5',
                 'team_id': 'T704EFPPF',
                 'team_domain': 'aarongorka',
                 'channel_id': 'C704EFSF7',

@@ -11,8 +11,6 @@ from urllib.parse import urlencode, quote_plus
 import unittest
 from timeit import default_timer as timer
 import time
-import timeout_decorator
-from pprint import pprint
 
 
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
@@ -51,7 +49,7 @@ def button_handler(event, context):
         return response
 
     selected_alias = payload['actions'][0]['value']
-    logging.debug(json.dumps({'selected_alias': selected_alias}))
+    logging.info(json.dumps({'selected_alias': selected_alias}))
 
     try:
         response = lookup_alias_and_execute(selected_alias)
@@ -112,7 +110,7 @@ def handler(event, context):
         }
         return response
     else:
-        logging.debug(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
+        logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
     try:
         response = lookup_alias_and_execute(selected_alias)
@@ -168,7 +166,7 @@ def get_query_details(config, selected_alias):
         if query['alias'] == selected_alias:
             return query
     else:
-        logging.debug(json.dumps('The selection the user has made does not exist in the configuration file'))
+        logging.warning(json.dumps('The selection the user has made does not exist in the configuration file'))
         return "missing_alias"
 
 
@@ -230,7 +228,7 @@ def run_query(query):
     start = timer()
     attempts = 0
     connected = False
-    logging.debug(json.dumps({'action': 'running query', 'query': query['mysql_host']}))
+    logging.info(json.dumps({'action': 'running query', 'query': query['sql']}))
     while not connected:
         try:
             cnx = mysql.connector.connect(
@@ -251,12 +249,15 @@ def run_query(query):
             attempts += 1
             time.sleep(1)
     try:
+        start = timer()
         cur = cnx.cursor(buffered=True, dictionary=True)
         cur.execute(query['sql'])
         result = cur.fetchall()
-        logging.debug(json.dumps({'action': 'running query', 'status': 'success'}))
+        elapsed = timer() - start
+        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
     except:
-        logging.exception(json.dumps({'action': 'running query', 'status': 'failed'}))
+        elapsed = timer() - start
+        logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed}))
         raise
 
     try:

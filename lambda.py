@@ -725,13 +725,9 @@ class MysqlConnectivityTest(unittest.TestCase):
 def main():
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
-    try:
-        unittest.main()
+    unittest.main()
 #        suite = unittest.TestLoader().loadTestsFromTestCase(FunctionTests)
 #        unittest.TextTestRunner().run(suite)
-    except:
-        logging.exception(json.dumps({'action': 'run tests', 'status': 'failed'}))
-        raise
 
 #    unittest.main()
 

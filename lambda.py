@@ -329,56 +329,59 @@ def format_query_result(result, query):
     """Formats the query results in to a format accepted by Slack"""
 
     rows = []
-    logging.debug(json.dumps({'action': 'formatting results'}))
-    for row in result:
-        for item in row:
-            try:
-                row[item] = row[item].decode('ascii', 'ignore')
-            except:
-                pass
-            try:
-                row[item] = str(row[item])
-            except:
-                pass
-        rows.append(row)
+    try:
+        for row in result:
+            for item in row:
+                try:
+                    row[item] = row[item].decode('ascii', 'ignore')
+                except:
+                    pass
+                try:
+                    row[item] = str(row[item])
+                except:
+                    pass
+            rows.append(row)
 
-    table = format_table(rows)
+        table = format_table(rows)
 
-    attachments = []
-    attachments.append({
-        "color": "#36a64f",
-        "callback_id": "comic_1234_xyz",
-        "mrkdwn_in": ["fields"],
-        "fields": [
-            {
-                "title": "Alias",
-                "value": query['alias'],
-                "short": True
-            },
-            {
-                "title": "SQL statement",
-                "value": query['sql'],
-                "short": False
-            },
-            {
-                "title": "MySQL Server",
-                "value": query['mysql_host'],
-                "short": True
-            },
-            {
-                "title": "Database",
-                "value": query['mysql_database'],
-                "short": True
-            },
-            {
-                "title": "Result",
-                "value": "```{}```".format(rows),
-                "short": False
-            },
-        ],
-        "fallback": str(result)
-    })
-    logging.debug(json.dumps({'attachments': attachments, 'action': 'logging attachments'}))
+        attachments = []
+        attachments.append({
+            "color": "#36a64f",
+            "callback_id": "comic_1234_xyz",
+            "mrkdwn_in": ["fields"],
+            "fields": [
+                {
+                    "title": "Alias",
+                    "value": query['alias'],
+                    "short": True
+                },
+                {
+                    "title": "SQL statement",
+                    "value": query['sql'],
+                    "short": False
+                },
+                {
+                    "title": "MySQL Server",
+                    "value": query['mysql_host'],
+                    "short": True
+                },
+                {
+                    "title": "Database",
+                    "value": query['mysql_database'],
+                    "short": True
+                },
+                {
+                    "title": "Result",
+                    "value": "```{}```".format(rows),
+                    "short": False
+                },
+            ],
+            "fallback": str(result)
+        })
+    except:
+        logging.exception(json.dumps({'action': 'formatting results', 'status': 'failed'}))
+    else:
+        logging.debug(json.dumps({'action': 'formatting results', 'status': 'success', 'attachments': attachments}))
 
     body = {
         "response_type": "in_channel",

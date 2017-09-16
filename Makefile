@@ -27,7 +27,7 @@ deploy: run $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIR
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
 unitTest: $(ASSUME_REQUIRED) *.py $(DOTENV_TARGET) unzip run/lambda.py run/example.yml 
-	docker-compose up test
+	docker-compose run test
 
 smokeTest: $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest

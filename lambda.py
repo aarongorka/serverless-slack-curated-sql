@@ -215,10 +215,10 @@ def lookup_alias_and_execute(selected_alias):
         result = run_query(query)
     except mysql.connector.errors.ProgrammingError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return format_response({"text": "The SQL query failed, please check the logs for more information"})
+        return format_response({"text": "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)})
     except KeyError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return format_response({"text": "The SQL query failed, are the credentials for this query configured?"})
+        return format_response({"text": "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)})
     else:
         logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
 

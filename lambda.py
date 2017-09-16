@@ -9,6 +9,8 @@ import mysql.connector
 from urllib.parse import urlparse, parse_qs
 from urllib.parse import urlencode, quote_plus
 import unittest
+from unittest.mock import patch
+from unittest.mock import MagicMock
 from timeit import default_timer as timer
 import time
 
@@ -23,12 +25,15 @@ def button_handler(event, context):
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     logging.debug(json.dumps({'action': 'initialising'}))
-    logging.debug(json.dumps({'event': event}))
+    try:
+        logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
+    except:
+        logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
 
     try:
         body = parse_qs(event['body'])
         payload = json.loads(body['payload'][0])
-    except Exception:
+    except:
         logging.exception(json.dumps({'action': 'parse payload', 'status': 'failed'}))
         raise
     else:
@@ -36,7 +41,6 @@ def button_handler(event, context):
 
     try:
         correlation_id = payload['trigger_id']  # Use correlation ID from Slack
-        logging.debug(json.dumps({'correlation_id': correlation_id}))
         aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
     except:
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
@@ -47,9 +51,15 @@ def button_handler(event, context):
             }
         }
         return response
+    else:
+        logging.debug(json.dumps({'action': 'get correlation-id', 'status': 'success', 'correlation_id': correlation_id}))
 
-    selected_alias = payload['actions'][0]['value']
-    logging.info(json.dumps({'selected_alias': selected_alias}))
+    try:
+        selected_alias = payload['actions'][0]['value']
+    except:
+        logging.exception(json.dumps({'action': 'get selected_alias', 'status': 'failed'}))
+    else:
+        logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
     try:
         response = lookup_alias_and_execute(selected_alias)
@@ -73,7 +83,10 @@ def handler(event, context):
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     logging.debug(json.dumps({'action': 'initialising'}))
-    logging.debug(json.dumps({'event': event}))
+    try:
+        logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
+    except:
+        logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
 
     try:
         body = parse_qs(event['body'])
@@ -85,7 +98,6 @@ def handler(event, context):
 
     try:
         correlation_id = body['trigger_id'][0]  # Use correlation ID from Slack
-        logging.debug(json.dumps({'correlation_id': correlation_id}))
         aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
     except:
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
@@ -96,6 +108,8 @@ def handler(event, context):
             }
         }
         return response
+    else:
+        logging.debug(json.dumps({'action': 'get correlation-id', 'status': 'success', 'correlation_id': correlation_id}))
 
     try:
         selected_alias = body['text'][0]
@@ -132,85 +146,92 @@ def get_config():
     with open("example.yml") as stream:
         try:
             config = yaml.safe_load(stream)
-            logging.debug(json.dumps({'config': config}))
         except yaml.YAMLError:
             logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
             raise
         else:
-            logging.debug(json.dumps({'action': 'load yaml', 'status': 'success'}))
+            logging.debug(json.dumps({'action': 'load yaml', 'status': 'success', 'config': config}))
     return config
 
+
+#class FunctionTests(unittest.TestCase):
+#    @patch('lambda.get_config')
+#    def test_lookup_alias_and_execute(self, mock_get_config):
+#        mock_get_config.return_value = MagicMock('asdfasdfasdf')
+#        selected_alias = '23452345'
+#        response = lookup_alias_and_execute(selected_alias)
+#        self.assertEqual(response, 200)
 
 def lookup_alias_and_execute(selected_alias):
     """Executes a user's selected alias by looking up details from the config file, returns a message that can be returned to Slack"""
 
     config = get_config()
-    query = get_query_details(config, selected_alias)
 
-    if query == "missing_alias":
-        response = missing_alias_message(config['queries'], selected_alias)
+    try:
+        query = [query for query in config['queries'] if query['alias'] == selected_alias][0]
+    except IndexError:
+        logging.warning(json.dumps({'action': 'get query using selected_alias', 'status': 'failed', 'selected_alias': selected_alias, 'config': config}))
+        return missing_alias_message(config['queries'], selected_alias)
     else:
-        try:
-            result = run_query(query)
-        except mysql.connector.errors.ProgrammingError:
-            logging.exception(json.dumps({"action": "SQL query failed, returning error message to user"}))
-            return format_response({"text": "The SQL query failed, please check the logs for more information"})
-        response = format_query_result(result, query)
+        logging.debug(json.dumps({'action': 'get query using selected_alias', 'status': 'success', 'selected_alias': selected_alias, 'query': query, 'config': config}))
+
+    try:
+        result = run_query(query)
+    except mysql.connector.errors.ProgrammingError:
+        logging.exception(json.dumps({"action": "running SQL query", "status": "failed"}))
+        return format_response({"text": "The SQL query failed, please check the logs for more information"})
+    else:
+        logging.debug(json.dumps({"action": "running SQL query", "status": "success", "result": "results are not JSON serialisable, skipping"}))
+
+    response = format_query_result(result, query)
     return response
-
-
-def get_query_details(config, selected_alias):
-    """Checks that the user's selection exists in the configuration file and returns the data associated with it"""
-
-    for query in config['queries']:
-        if query['alias'] == selected_alias:
-            return query
-    else:
-        logging.warning(json.dumps('The selection the user has made does not exist in the configuration file'))
-        return "missing_alias"
 
 
 def missing_alias_message(queries, selected_alias):
     """Returns a mesage about the alias missing and provides valid aliases to execute"""
 
-    attachments = []
-    for query in queries:
-        attachments.append({
-            "color": "#36a64f",
-            "callback_id": "comic_1234_xyz",
-            "fields": [
-                {
-                    "title": "Alias",
-                    "value": query['alias'],
-                    "short": True
-                },
-                {
-                    "title": "SQL statement",
-                    "value": query['sql'],
-                    "short": False
-                },
-                {
-                    "title": "MySQL Server",
-                    "value": query['mysql_host'],
-                    "short": True
-                },
-                {
-                    "title": "Database",
-                    "value": query['mysql_database'],
-                    "short": True
-                }
-            ],
-            "actions": [
-                {
-                    "name": "execute",
-                    "text": "execute",
-                    "type": "button",
-                    "value": query['alias']
-                }
-            ],
-            "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
-        })
-    logging.debug(json.dumps({'attachments': attachments}))
+    try:
+        attachments = []
+        for query in queries:
+            attachments.append({
+                "color": "#36a64f",
+                "callback_id": "comic_1234_xyz",
+                "fields": [
+                    {
+                        "title": "Alias",
+                        "value": query['alias'],
+                        "short": True
+                    },
+                    {
+                        "title": "SQL statement",
+                        "value": query['sql'],
+                        "short": False
+                    },
+                    {
+                        "title": "MySQL Server",
+                        "value": query['mysql_host'],
+                        "short": True
+                    },
+                    {
+                        "title": "Database",
+                        "value": query['mysql_database'],
+                        "short": True
+                    }
+                ],
+                "actions": [
+                    {
+                        "name": "execute",
+                        "text": "execute",
+                        "type": "button",
+                        "value": query['alias']
+                    }
+                ],
+                "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
+            })
+    except:
+        logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'failed'}))
+    else:
+        logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'success', 'attachments': attachments}))
 
     body = {
         "response_type": "in_channel",
@@ -248,22 +269,26 @@ def run_query(query):
                 raise
             attempts += 1
             time.sleep(1)
+
     try:
         start = timer()
         cur = cnx.cursor(buffered=True, dictionary=True)
         cur.execute(query['sql'])
         result = cur.fetchall()
-        elapsed = timer() - start
-        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed}))
         raise
+    else:
+        elapsed = timer() - start
+        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
 
     try:
         cnx.close()
     except:
         logging.exception(json.dumps({'action': 'disconnect from MySQL', 'status': 'failed'}))
+    else:
+        logging.debug(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
 
     return result
 
@@ -424,7 +449,7 @@ class MissingAliasTest(unittest.TestCase):
                 'command': '/sql',
                 'text': 'missingalias',
                 'response_url': 'https://hooks.slack.com/commands/T704EFPPF/239872535367/4ERft7zrhxf5c0YtZpWSXeqk',
-                'trigger_id': 'ValidAliasTest'}),
+                'trigger_id': 'MissingAliasTest'}),
             'isBase64Encoded': False}
         self.response = handler(event, {})
         self.body = json.loads(self.response['body'])
@@ -648,7 +673,7 @@ class ValidAliasInvalidQueryTest(unittest.TestCase):
                 'command': '/sql',
                 'text': 'invalidquery',
                 'response_url': 'https://hooks.slack.com/commands/T704EFPPF/239872535367/4ERft7zrhxf5c0YtZpWSXeqk',
-                'trigger_id': 'ValidAliasTest'}),
+                'trigger_id': 'ValidAliasInvalidQueryTest'}),
             'isBase64Encoded': False}
         logging.debug(json.dumps({"action": "setting up new test ValidAliasInvalidQueryTest"}))
         self.response = handler(event, {})
@@ -699,7 +724,7 @@ def main():
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
     try:
         unittest.main()
-#        suite = unittest.TestLoader().loadTestsFromTestCase(MissingAliasTest)
+#        suite = unittest.TestLoader().loadTestsFromTestCase(FunctionTests)
 #        unittest.TextTestRunner().run(suite)
     except:
         logging.exception(json.dumps({'action': 'run tests', 'status': 'failed'}))

@@ -13,6 +13,7 @@ from unittest.mock import patch
 from unittest.mock import MagicMock
 from timeit import default_timer as timer
 import time
+import uuid
 
 
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
@@ -40,7 +41,7 @@ def button_handler(event, context):
         logging.debug(json.dumps({'action': 'parse payload', 'status': 'success', 'payload': payload}))
 
     try:
-        correlation_id = payload['trigger_id']  # Use correlation ID from Slack
+        correlation_id = get_correlation_id(payload=payload)
         aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
     except:
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
@@ -77,6 +78,18 @@ def button_handler(event, context):
     return response
 
 
+def get_correlation_id(body=None, payload=None, event=None):
+    if body is not None:
+        correlation_id = body['trigger_id'][0]
+    elif payload is not None:
+        correlation_id = payload['trigger_id']
+    elif event is not None:
+        correlation_id = event['headers']['X-Amzn-Trace-Id'].split('=')[1]
+    else:
+        correlation_id = str(uuid.uuid4())
+    return correlation_id
+
+
 def handler(event, context):
     """Main entrypoint"""
 
@@ -97,7 +110,7 @@ def handler(event, context):
         logging.debug(json.dumps({'action': 'parse body', 'status': 'success', 'body': body}))
 
     try:
-        correlation_id = body['trigger_id'][0]  # Use correlation ID from Slack
+        correlation_id = get_correlation_id(body=body)
         aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
     except:
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
@@ -154,13 +167,14 @@ def get_config():
     return config
 
 
-#class FunctionTests(unittest.TestCase):
-#    @patch('lambda.get_config')
-#    def test_lookup_alias_and_execute(self, mock_get_config):
-#        mock_get_config.return_value = MagicMock('asdfasdfasdf')
-#        selected_alias = '23452345'
-#        response = lookup_alias_and_execute(selected_alias)
-#        self.assertEqual(response, 200)
+class FunctionTests(unittest.TestCase):
+    @patch('lambda.get_config')
+    def test_lookup_alias_and_execute(self, mock_get_config):
+        mock_get_config.return_value = MagicMock('asdfasdfasdf')
+        selected_alias = '23452345'
+        response = lookup_alias_and_execute(selected_alias)
+        self.assertEqual(response['statusCode'], 200)
+
 
 def lookup_alias_and_execute(selected_alias):
     """Executes a user's selected alias by looking up details from the config file, returns a message that can be returned to Slack"""
@@ -178,10 +192,10 @@ def lookup_alias_and_execute(selected_alias):
     try:
         result = run_query(query)
     except mysql.connector.errors.ProgrammingError:
-        logging.exception(json.dumps({"action": "running SQL query", "status": "failed"}))
+        logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
         return format_response({"text": "The SQL query failed, please check the logs for more information"})
     else:
-        logging.debug(json.dumps({"action": "running SQL query", "status": "success", "result": "results are not JSON serialisable, skipping"}))
+        logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
 
     response = format_query_result(result, query)
     return response
@@ -249,7 +263,6 @@ def run_query(query):
     start = timer()
     attempts = 0
     connected = False
-    logging.info(json.dumps({'action': 'running query', 'query': query['sql']}))
     while not connected:
         try:
             cnx = mysql.connector.connect(
@@ -277,11 +290,11 @@ def run_query(query):
         result = cur.fetchall()
     except:
         elapsed = timer() - start
-        logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed}))
+        logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))
         raise
     else:
         elapsed = timer() - start
-        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
+        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed, 'query': query['sql']}))
 
     try:
         cnx.close()
@@ -714,7 +727,7 @@ class MysqlConnectivityTest(unittest.TestCase):
                     raise
                 attempts += 1
             logging.debug(json.dumps({"action": "sleeping"}))
-            time.sleep(5)
+            time.sleep(1)
         try:
             cnx.close()
         except:

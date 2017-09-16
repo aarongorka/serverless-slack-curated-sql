@@ -1,12 +1,12 @@
 queries:
   -
     alias: getstats
-    sql: SELECT * FROM sometable
+    sql: 'SELECT * FROM sometable;'
     mysql_host: 127.0.0.1
     mysql_database: somedb
   -
     alias: getbilling
-    sql: SELECT * FROM billingtable
+    sql: 'SELECT * FROM billingtable;'
     mysql_host: 127.0.0.1
     mysql_database: somedb
   -

@@ -10,7 +10,6 @@ from urllib.parse import urlparse, parse_qs
 from urllib.parse import urlencode, quote_plus
 import unittest
 from unittest.mock import patch
-from unittest.mock import MagicMock
 from timeit import default_timer as timer
 import time
 import uuid
@@ -168,12 +167,35 @@ def get_config():
 
 
 class FunctionTests(unittest.TestCase):
-    @patch('lambda.get_config')
-    def test_lookup_alias_and_execute(self, mock_get_config):
-        mock_get_config.return_value = MagicMock('asdfasdfasdf')
+    @patch('__main__.get_correlation_id', return_value='asdfasdfasdf')
+    @patch('__main__.get_config', return_value={'queries': []})
+    def test_lookup_alias_and_execute(self, get_config, get_correlation_id):
+        self.assertEqual(get_correlation_id(), 'asdfasdfasdf')
+        self.assertNotEqual(get_correlation_id(), 'asdfasdfasdfx')
         selected_alias = '23452345'
         response = lookup_alias_and_execute(selected_alias)
+        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
         self.assertEqual(response['statusCode'], 200)
+
+    def test_missing_alias_message(self):
+        queries = [{'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'anotheralias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}]
+        selected_alias = 'testalias'
+        response = missing_alias_message(queries, selected_alias)
+        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
+
+        attachments = json.loads(response['body'])['attachments']
+
+        self.assertTrue(attachments)
+
+        fields = [x["fields"] for x in attachments]
+        logging.debug(json.dumps({'fields': fields, 'action': 'logging fields'}))
+        titles = [x["title"] for x in fields[0]]
+        logging.debug(json.dumps({'titles': titles, 'action': 'logging titles'}))
+        values = [x["value"] for x in fields[0]]
+        logging.debug(json.dumps({'values': values, 'action': 'logging values'}))
+
+        self.assertTrue("Alias" in titles)
+        self.assertTrue("test.com.au" in str(values))
 
 
 def lookup_alias_and_execute(selected_alias):
@@ -183,8 +205,8 @@ def lookup_alias_and_execute(selected_alias):
 
     try:
         query = [query for query in config['queries'] if query['alias'] == selected_alias][0]
-    except IndexError:
-        logging.warning(json.dumps({'action': 'get query using selected_alias', 'status': 'failed', 'selected_alias': selected_alias, 'config': config}))
+    except:
+        logging.warning(json.dumps({'action': 'get query using selected_alias', 'status': 'failed', 'selected_alias': selected_alias, 'config': str(config)}))
         return missing_alias_message(config['queries'], selected_alias)
     else:
         logging.debug(json.dumps({'action': 'get query using selected_alias', 'status': 'success', 'selected_alias': selected_alias, 'query': query, 'config': config}))
@@ -194,6 +216,9 @@ def lookup_alias_and_execute(selected_alias):
     except mysql.connector.errors.ProgrammingError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
         return format_response({"text": "The SQL query failed, please check the logs for more information"})
+    except KeyError:
+        logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
+        return format_response({"text": "The SQL query failed, are the credentials for this query configured?"})
     else:
         logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
 
@@ -243,7 +268,7 @@ def missing_alias_message(queries, selected_alias):
                 "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
             })
     except:
-        logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'failed'}))
+        logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'failed', 'queries': queries, 'selected_alias': selected_alias}))
     else:
         logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'success', 'attachments': attachments}))
 
@@ -282,6 +307,9 @@ def run_query(query):
                 raise
             attempts += 1
             time.sleep(1)
+        except KeyError:
+            logging.exception(json.dumps({'action': 'connect to mysql', 'status': 'failed', 'credentials': 'absent'}))
+            raise
 
     try:
         start = timer()

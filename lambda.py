@@ -37,7 +37,7 @@ def button_handler(event, context):
         logging.exception(json.dumps({'action': 'parse payload', 'status': 'failed'}))
         raise
     else:
-        logging.debug(json.dumps({'action': 'parse payload', 'status': 'success', 'payload': payload}))
+        logging.info(json.dumps({'action': 'parse payload', 'status': 'success', 'payload': payload}))
 
     try:
         correlation_id = get_correlation_id(payload=payload)
@@ -106,7 +106,7 @@ def handler(event, context):
         logging.exception(json.dumps({'action': 'parse body', 'status': 'failed'}))
         raise
     else:
-        logging.debug(json.dumps({'action': 'parse body', 'status': 'success', 'body': body}))
+        logging.info(json.dumps({'action': 'parse body', 'status': 'success', 'body': body}))
 
     try:
         correlation_id = get_correlation_id(body=body)

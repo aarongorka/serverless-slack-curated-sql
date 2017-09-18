@@ -29,6 +29,7 @@ def button_handler(event, context):
         logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
     except:
         logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
+        raise
 
     try:
         body = parse_qs(event['body'])
@@ -58,6 +59,7 @@ def button_handler(event, context):
         selected_alias = payload['actions'][0]['value']
     except:
         logging.exception(json.dumps({'action': 'get selected_alias', 'status': 'failed'}))
+        raise
     else:
         logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
@@ -99,6 +101,7 @@ def handler(event, context):
         logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
     except:
         logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
+        raise
 
     try:
         body = parse_qs(event['body'])
@@ -155,14 +158,39 @@ def handler(event, context):
 
 
 def get_config():
-    with open("example.yml") as stream:
+    envs = [x for x in os.environ if x.startswith('SQL_')]
+    config = {'queries': []}
+    aliases = []
+    try:
+        for env in envs:
+            try:
+                aliases.append(re.search('^SQL_(.*)_(HOST|DATABASE|PASSWORD|USERNAME|SQL|ALIAS)$', env).group(1).lower())
+            except AttributeError:
+                pass
+        aliases = sorted(set(aliases))
+    except:
+        logging.exception(json.dumps({'action': 'get aliases from env vars', 'status': 'failed'}))
+        raise
+    else:
+        logging.debug(json.dumps({'action': 'get aliases from env vars', 'status': 'success', 'aliases': aliases}))
+
+    for alias in aliases:
         try:
-            config = yaml.safe_load(stream)
-        except yaml.YAMLError:
-            logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
-            raise
+            config['queries'].append({
+                'alias': alias,
+                'sql': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_SQL')][0],
+                'mysql_host': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_HOST')][0],
+                'mysql_database': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_DATABASE')][0],
+                'mysql_password': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_PASSWORD')][0],
+                'mysql_username': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_USERNAME')][0]
+            })
+        except KeyError:
+            logging.exception(json.dumps({'action': 'append query to config', 'status': 'error', 'alias': alias}))
+            pass
         else:
-            logging.debug(json.dumps({'action': 'load yaml', 'status': 'success', 'config': config}))
+            logging.debug(json.dumps({'action': 'append query to config', 'status': 'success', 'alias': alias}))
+
+    config = json.loads(json.dumps(config))
     return config
 
 
@@ -178,7 +206,7 @@ class FunctionTests(unittest.TestCase):
         self.assertEqual(response['statusCode'], 200)
 
     def test_missing_alias_message(self):
-        queries = [{'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'anotheralias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}]
+        queries = [{'alias': 'testalias1', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'anotheralias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}]
         selected_alias = 'testalias'
         response = missing_alias_message(queries, selected_alias)
         self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
@@ -267,8 +295,9 @@ def missing_alias_message(queries, selected_alias):
                 ],
                 "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
             })
-    except:
+    except KeyError:
         logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'failed', 'queries': queries, 'selected_alias': selected_alias}))
+        raise
     else:
         logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'success', 'attachments': attachments}))
 
@@ -293,8 +322,8 @@ def run_query(query):
             cnx = mysql.connector.connect(
                 charset='utf8',
                 connect_timeout=20,
-                user=os.environ['MYSQL_USER'],
-                password=os.environ['MYSQL_PASSWORD'],
+                user=query['mysql_username'],
+                password=query['mysql_password'],
                 database=query['mysql_database'],
                 host=query['mysql_host']
             )
@@ -308,6 +337,7 @@ def run_query(query):
             attempts += 1
             time.sleep(1)
         except KeyError:
+            cnx.close()
             logging.exception(json.dumps({'action': 'connect to mysql', 'status': 'failed', 'credentials': 'absent'}))
             raise
 
@@ -323,13 +353,8 @@ def run_query(query):
     else:
         elapsed = timer() - start
         logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed, 'query': query['sql']}))
-
-    try:
+    finally:
         cnx.close()
-    except:
-        logging.exception(json.dumps({'action': 'disconnect from MySQL', 'status': 'failed'}))
-    else:
-        logging.debug(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed}))
 
     return result
 
@@ -421,6 +446,7 @@ def format_query_result(result, query):
         })
     except:
         logging.exception(json.dumps({'action': 'formatting results', 'status': 'failed'}))
+        raise
     else:
         logging.debug(json.dumps({'action': 'formatting results', 'status': 'success', 'attachments': attachments}))
 
@@ -640,21 +666,28 @@ class ValidAliasTest(unittest.TestCase):
         logging.debug(json.dumps({"action": "setting up new test ValidAliasTest"}))
         self.response = handler(event, {})
         self.body = json.loads(self.response['body'])
+        self.attachments = self.body['attachments']
 
     def test_response(self):
         self.assertEqual(self.response['statusCode'], 200)
 
-    def test_text(self):
-        attachments = self.body['attachments']
-        fields = [x["fields"] for x in attachments]
+    def test_attachments(self):
+        self.assertNotEqual(self.attachments, [])
+
+    def test_fields(self):
+        fields = [x["fields"] for x in self.attachments]
         logging.debug(json.dumps({'fields': fields, 'action': 'logging fields'}))
         titles = [x["title"] for x in fields[0]]
         logging.debug(json.dumps({'titles': titles, 'action': 'logging titles'}))
         values = [x["value"] for x in fields[0]]
         logging.debug(json.dumps({'values': values, 'action': 'logging values'}))
-
         self.assertTrue("Result" in titles)
         self.assertTrue("Nagasaki" in str(values))
+
+    def test_valid_text(self):
+        selected_alias = 'getemployees'
+        self.assertNotEqual(self.body.get('text'), "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias))
+        self.assertNotEqual(self.body.get('text'), "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
 
 
 class ValidAliasInvalidQueryTest(unittest.TestCase):
@@ -727,7 +760,7 @@ class ValidAliasInvalidQueryTest(unittest.TestCase):
         self.assertEqual(self.response['statusCode'], 200)
 
     def test_text(self):
-        self.assertEqual(self.body['text'], 'The SQL query failed, please check the logs for more information')
+        self.assertEqual(self.body['text'], "The SQL query (alias: {}) failed, please check the logs for more information".format('invalidquery'))
 
 
 class MysqlConnectivityTest(unittest.TestCase):
@@ -754,19 +787,15 @@ class MysqlConnectivityTest(unittest.TestCase):
                     logging.exception("Failed to connect to MySQL database")
                     raise
                 attempts += 1
+            finally:
+                cnx.close()
             logging.debug(json.dumps({"action": "sleeping"}))
             time.sleep(1)
-        try:
-            cnx.close()
-        except:
-            logging.exception(json.dumps({'action': 'disconnect from MySQL', 'status': 'failed'}))
-            raise
-
 
 def main():
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
-    unittest.main()
+    unittest.main(verbosity=2)
 #        suite = unittest.TestLoader().loadTestsFromTestCase(FunctionTests)
 #        unittest.TextTestRunner().run(suite)
 

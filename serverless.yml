@@ -14,8 +14,10 @@ custom:
       alarm: ${env:OPS_GENIE_CRITICAL_SNS_ARN}
       insufficientData: ${env:OPS_GENIE_MAJOR_SNS_ARN}
     definitions:
-      functionErrors:
-        threshold: 10
+      functionDuration:
+        threshold: 1000
+        statistic: 'p95'
+        period: 900
     alarms:
       - functionErrors
       - functionThrottles
@@ -32,6 +34,13 @@ provider:
   timeout: 10
   region: ${env:AWS_REGION}
   variableSyntax: "\\${(?!AWS::)((?:self|env):[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+      Resource:
+        Fn::Sub: "arn:aws:lambda:ap-southeast-2:${AWS::AccountId}:function:${self:service}-${env:ENV}-query"
   stackTags:
     FRAMEWORK: serverless
   environment:
@@ -40,6 +49,8 @@ provider:
     QUERY_HANDLER: ${self:service}-${env:ENV}-query
     SLACK_TOKEN: ${env:SLACK_TOKEN}
     LOGLEVEL: ${env:LOGLEVEL}
+    SQL_GETEMPLOYEES_USERNAME: ${env:SQL_GETEMPLOYEES_USERNAME}
+    SQL_GETEMPLOYEES_PASSWORD: ${env:SQL_GETEMPLOYEES_PASSWORD}
 
 package:
   artifact: package/package.zip
@@ -60,8 +71,6 @@ functions:
     alarms:
       - name: functionDuration
         threshold: 200000
-        statistic: 'p95'
-        period: 900
     vpc:
       securityGroupIds:
         - ${env:AWS_SG}

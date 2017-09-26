@@ -180,12 +180,14 @@ def query_handler(event, context):
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
     logging.debug(json.dumps({'action': 'initialising'}))
-#    event = {'query': {'sql': 'SELECT * FROM address LIMIT 5;', 'mysql_host': 'db', 'mysql_database': 'sakila', 'alias': 'getemployees', 'mysql_password': 'somepasswordasdf', 'mysql_username': 'someuserasdfasdf'}, 'location': 'C704EFSF7', 'secret': 'asdfasdf'}
     redacted_event = copy.deepcopy(event)
     redacted_event['query']['mysql_password'] = '********'
+    try:
+        logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': redacted_event}))
+    except:
+        logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
+        raise
 
-    print(redacted_event)
-    print('hello')
     try:
         correlation_id = event['correlation_id']
         logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
@@ -211,9 +213,9 @@ def query_handler(event, context):
     snippet = execute_query(query)
 
     location = event['location']
-#    snippet = 'asdfasdfasdfasdfasdfas'
     post_snippet(snippet, location, correlation_id)
-    return { "statusCode": 200 }
+    return {"statusCode": 200}
+
 
 def execute_query(query):
     """Executes a query, returns a response"""
@@ -221,19 +223,22 @@ def execute_query(query):
     selected_alias = query['alias']
     try:
         result = run_query(query)
-        print(result)
-        result = str(result)
     except mysql.connector.errors.ProgrammingError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return format_response({"text": "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)})
+        return "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)
     except KeyError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return format_response({"text": "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)})
+        return "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)
     else:
         logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
 
-#    response = format_query_result(result, query)
-    return result
+    try:
+        formatted = format_table(result)
+    except:
+        logging.exception(json.dumps({"action": "formatting as table", "status": "failed"}))
+        return "Formatting the query results failed."
+    return formatted
+
 
 def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id):
     """Looks up a query in the configuration file, and then invokes another lambda to run the query and respond later"""
@@ -498,8 +503,9 @@ def invoke_query_handler(query, location, correlation_id):
         logging.info(json.dumps({'action': 'invoke query_handler', 'status': 'success'}))
     return
 
+
 def post_snippet(snippet, location, correlation_id=get_correlation_id()):
-    
+
     url = 'https://slack.com/api/files.upload'
 
     data = {}
@@ -509,7 +515,7 @@ def post_snippet(snippet, location, correlation_id=get_correlation_id()):
         'channels': location
     }
     correlation_id = 'testing'
-            
+
     try:
         r = requests.post(url, data=data, timeout=5, headers={'Correlation-Id': correlation_id})
     except:
@@ -855,6 +861,7 @@ class MysqlConnectivityTest(unittest.TestCase):
             logging.debug(json.dumps({"action": "sleeping"}))
             time.sleep(1)
 
+
 def main():
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
     aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
@@ -863,7 +870,6 @@ def main():
 #        unittest.TextTestRunner().run(suite)
 
 #    unittest.main()
-
 
 
 class FunctionTests(unittest.TestCase):
@@ -896,7 +902,6 @@ class FunctionTests(unittest.TestCase):
 
         self.assertTrue("Alias" in titles)
         self.assertTrue("test.com.au" in str(values))
-
 
 
 if __name__ == '__main__':

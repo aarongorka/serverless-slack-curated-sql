@@ -13,6 +13,10 @@ from unittest.mock import patch
 from timeit import default_timer as timer
 import time
 import uuid
+import requests
+import boto3
+import botocore
+import copy
 
 
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), timestamp=int(time.time()))
@@ -63,8 +67,9 @@ def button_handler(event, context):
     else:
         logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
+    location = payload['channel']['id']
     try:
-        response = lookup_alias_and_execute(selected_alias)
+        response = lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id)
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
@@ -141,9 +146,10 @@ def handler(event, context):
     else:
         logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
+    location = body['channel_id']
     try:
-        response = lookup_alias_and_execute(selected_alias)
-    except mysql.connector.errors.InterfaceError:
+        response = lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id)
+    except:
         response = {
             "statusCode": 200,
             "body": json.dumps({"text": "Failed to execute MySQL query"}),
@@ -158,89 +164,65 @@ def handler(event, context):
 
 
 def get_config():
-    envs = [x for x in os.environ if x.startswith('SQL_')]
-    config = {'queries': []}
-    aliases = []
-    try:
-        for env in envs:
-            try:
-                aliases.append(re.search('^SQL_(.*)_(HOST|DATABASE|PASSWORD|USERNAME|SQL|ALIAS)$', env).group(1).lower())
-            except AttributeError:
-                pass
-        aliases = sorted(set(aliases))
-    except:
-        logging.exception(json.dumps({'action': 'get aliases from env vars', 'status': 'failed'}))
-        raise
-    else:
-        logging.debug(json.dumps({'action': 'get aliases from env vars', 'status': 'success', 'aliases': aliases}))
-
-    for alias in aliases:
+    with open("example.yml") as stream:
         try:
-            config['queries'].append({
-                'alias': alias,
-                'sql': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_SQL')][0],
-                'mysql_host': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_HOST')][0],
-                'mysql_database': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_DATABASE')][0],
-                'mysql_password': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_PASSWORD')][0],
-                'mysql_username': [os.environ[x] for x in envs if alias.upper() in x and x.endswith('_USERNAME')][0]
-            })
-        except KeyError:
-            logging.exception(json.dumps({'action': 'append query to config', 'status': 'error', 'alias': alias}))
-            pass
+            config = yaml.safe_load(stream)
+        except yaml.YAMLError:
+            logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
+            raise
         else:
-            logging.debug(json.dumps({'action': 'append query to config', 'status': 'success', 'alias': alias}))
-
-    config = json.loads(json.dumps(config))
+            logging.debug(json.dumps({'action': 'load yaml', 'status': 'success', 'config': config}))
     return config
 
 
-class FunctionTests(unittest.TestCase):
-    @patch('__main__.get_correlation_id', return_value='asdfasdfasdf')
-    @patch('__main__.get_config', return_value={'queries': []})
-    def test_lookup_alias_and_execute(self, get_config, get_correlation_id):
-        self.assertEqual(get_correlation_id(), 'asdfasdfasdf')
-        self.assertNotEqual(get_correlation_id(), 'asdfasdfasdfx')
-        selected_alias = '23452345'
-        response = lookup_alias_and_execute(selected_alias)
-        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
-        self.assertEqual(response['statusCode'], 200)
+def query_handler(event, context):
+    """Executes query and sends a file to the channel from which we received the request"""
+    aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
+    aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
+    logging.debug(json.dumps({'action': 'initialising'}))
+#    event = {'query': {'sql': 'SELECT * FROM address LIMIT 5;', 'mysql_host': 'db', 'mysql_database': 'sakila', 'alias': 'getemployees', 'mysql_password': 'somepasswordasdf', 'mysql_username': 'someuserasdfasdf'}, 'location': 'C704EFSF7', 'secret': 'asdfasdf'}
+    redacted_event = copy.deepcopy(event)
+    redacted_event['query']['mysql_password'] = '********'
 
-    def test_missing_alias_message(self):
-        queries = [{'alias': 'testalias1', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, {'alias': 'anotheralias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}]
-        selected_alias = 'testalias'
-        response = missing_alias_message(queries, selected_alias)
-        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
-
-        attachments = json.loads(response['body'])['attachments']
-
-        self.assertTrue(attachments)
-
-        fields = [x["fields"] for x in attachments]
-        logging.debug(json.dumps({'fields': fields, 'action': 'logging fields'}))
-        titles = [x["title"] for x in fields[0]]
-        logging.debug(json.dumps({'titles': titles, 'action': 'logging titles'}))
-        values = [x["value"] for x in fields[0]]
-        logging.debug(json.dumps({'values': values, 'action': 'logging values'}))
-
-        self.assertTrue("Alias" in titles)
-        self.assertTrue("test.com.au" in str(values))
-
-
-def lookup_alias_and_execute(selected_alias):
-    """Executes a user's selected alias by looking up details from the config file, returns a message that can be returned to Slack"""
-
-    config = get_config()
+    print(redacted_event)
+    print('hello')
+    try:
+        correlation_id = event['correlation_id']
+        logging.debug(json.dumps({'action': 'logging event', 'status': 'success', 'event': event}))
+    except:
+        logging.exception(json.dumps({'action': 'logging event', 'status': 'failed'}))
+        raise
 
     try:
-        query = [query for query in config['queries'] if query['alias'] == selected_alias][0]
+        aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
     except:
-        logging.warning(json.dumps({'action': 'get query using selected_alias', 'status': 'failed', 'selected_alias': selected_alias, 'config': str(config)}))
-        return missing_alias_message(config['queries'], selected_alias)
+        logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
+        response = {
+            "statusCode": 503,
+            'headers': {
+                'Content-Type': 'application/json',
+            }
+        }
+        return response
     else:
-        logging.debug(json.dumps({'action': 'get query using selected_alias', 'status': 'success', 'selected_alias': selected_alias, 'query': query, 'config': config}))
+        logging.debug(json.dumps({'action': 'get correlation-id', 'status': 'success', 'correlation_id': correlation_id}))
 
+    query = event['query']
+    snippet = execute_query(query)
+
+    location = event['location']
+#    snippet = 'asdfasdfasdfasdfasdfas'
+    post_snippet(snippet, location, correlation_id)
+    return { "statusCode": 200 }
+
+def execute_query(query):
+    """Executes a query, returns a response"""
+
+    selected_alias = query['alias']
     try:
         result = run_query(query)
+        print(result)
+        result = str(result)
     except mysql.connector.errors.ProgrammingError:
         logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
         return format_response({"text": "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)})
@@ -250,7 +232,39 @@ def lookup_alias_and_execute(selected_alias):
     else:
         logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
 
-    response = format_query_result(result, query)
+#    response = format_query_result(result, query)
+    return result
+
+def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id):
+    """Looks up a query in the configuration file, and then invokes another lambda to run the query and respond later"""
+
+    config = get_config()
+
+    try:
+        query = config['queries'][selected_alias]
+    except:
+        logging.warning(json.dumps({'action': 'get query using selected_alias', 'status': 'failed', 'selected_alias': selected_alias, 'config': str(config)}))
+        return missing_alias_message(config['queries'], selected_alias)
+    else:
+        logging.debug(json.dumps({'action': 'get query using selected_alias', 'status': 'success', 'selected_alias': selected_alias, 'query': query, 'config': config}))
+
+    try:
+        query['alias'] = selected_alias
+        query['mysql_password'] = os.environ['SQL_' + selected_alias.upper() + '_PASSWORD']
+        query['mysql_username'] = os.environ['SQL_' + selected_alias.upper() + '_USERNAME']
+    except:
+        logging.warning(json.dumps({'action': 'get credentials', 'status': 'failed', 'selected_alias': selected_alias, 'config': str(config)}))
+        return format_response({"text": "Failed to get credentials for alias {}.".format(selected_alias)})
+    else:
+        logging.debug(json.dumps({'action': 'get query using selected_alias', 'status': 'success', 'selected_alias': selected_alias, 'query': query, 'config': config}))
+
+    try:
+        invoke_query_handler(query, location, correlation_id)
+    except:
+        raise
+
+    response = format_response({"text": "Query in progress..."})
+
     return response
 
 
@@ -266,22 +280,22 @@ def missing_alias_message(queries, selected_alias):
                 "fields": [
                     {
                         "title": "Alias",
-                        "value": query['alias'],
+                        "value": query,
                         "short": True
                     },
                     {
                         "title": "SQL statement",
-                        "value": query['sql'],
+                        "value": queries[query]['sql'],
                         "short": False
                     },
                     {
                         "title": "MySQL Server",
-                        "value": query['mysql_host'],
+                        "value": queries[query]['mysql_host'],
                         "short": True
                     },
                     {
                         "title": "Database",
-                        "value": query['mysql_database'],
+                        "value": queries[query]['mysql_database'],
                         "short": True
                     }
                 ],
@@ -290,16 +304,16 @@ def missing_alias_message(queries, selected_alias):
                         "name": "execute",
                         "text": "execute",
                         "type": "button",
-                        "value": query['alias']
+                        "value": query
                     }
                 ],
-                "fallback": "alias: {}, statement: {}".format(query['alias'], query['sql'])
+                "fallback": "alias: {}, statement: {}".format(query, queries[query]['sql'])
             })
     except KeyError:
         logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'failed', 'queries': queries, 'selected_alias': selected_alias}))
         raise
     else:
-        logging.exception(json.dumps({'action': 'formatting attachments', 'status': 'success', 'attachments': attachments}))
+        logging.debug(json.dumps({'action': 'formatting attachments', 'status': 'success', 'attachments': attachments}))
 
     body = {
         "response_type": "in_channel",
@@ -317,6 +331,7 @@ def run_query(query):
     start = timer()
     attempts = 0
     connected = False
+    logging.debug(json.dumps({'action': 'dumping query info', 'user': query['mysql_username'], 'password': query['mysql_password']}))
     while not connected:
         try:
             cnx = mysql.connector.connect(
@@ -456,6 +471,54 @@ def format_query_result(result, query):
     }
     response = format_response(body)
     return response
+
+
+def invoke_query_handler(query, location, correlation_id):
+    data = {
+        'query': query,
+        'location': location,
+        'correlation_id': correlation_id
+    }
+    try:
+        config = botocore.config.Config(connect_timeout=300, read_timeout=300)
+        client = boto3.client('lambda', config=config)
+        client.meta.events._unique_id_handlers['retry-config-lambda']['handler']._checker.__dict__['_max_attempts'] = 0
+        resp = client.invoke(
+            FunctionName=os.environ['QUERY_HANDLER'],
+            InvocationType='Event',
+            Payload=json.dumps(data)
+        )
+        print(resp)
+        payload = resp['Payload'].read()
+        print(payload)
+    except:
+        logging.exception(json.dumps({'action': 'post snippet', 'status': 'failed', 'data': data, 'handler': os.environ['QUERY_HANDLER']}))
+        raise
+    else:
+        logging.info(json.dumps({'action': 'invoke query_handler', 'status': 'success'}))
+    return
+
+def post_snippet(snippet, location, correlation_id=get_correlation_id()):
+    
+    url = 'https://slack.com/api/files.upload'
+
+    data = {}
+    data = {
+        'token': os.environ['SLACK_TOKEN'],
+        'content': snippet,
+        'channels': location
+    }
+    correlation_id = 'testing'
+            
+    try:
+        r = requests.post(url, data=data, timeout=5, headers={'Correlation-Id': correlation_id})
+    except:
+        logging.exception(json.dumps({'action': 'post snippet', 'status': 'failed', 'snippet': snippet, 'location': location}))
+        raise
+    else:
+        response = json.loads(r.text)
+        logging.info(json.dumps({'action': 'post snippet', 'status': 'success'}))
+        logging.debug(json.dumps({'action': 'post snippet', 'status': 'success', 'snippet': str(snippet), 'location': location, 'response': response}))
 
 
 class MissingAliasTest(unittest.TestCase):
@@ -800,6 +863,41 @@ def main():
 #        unittest.TextTestRunner().run(suite)
 
 #    unittest.main()
+
+
+
+class FunctionTests(unittest.TestCase):
+    @patch('__main__.get_correlation_id', return_value='asdfasdfasdf')
+    @patch('__main__.get_config', return_value={'queries': []})
+    def test_lookup_alias_and_execute(self, get_config, get_correlation_id):
+        self.assertEqual(get_correlation_id(), 'asdfasdfasdf')
+        self.assertNotEqual(get_correlation_id(), 'asdfasdfasdfx')
+        selected_alias = '23452345'
+        response = lookup_alias_and_execute(selected_alias)
+        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
+        self.assertEqual(response['statusCode'], 200)
+
+    def test_missing_alias_message(self):
+        queries = {'testalias1': {'alias': 'testalias1', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, 'testalias': {'alias': 'testalias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}, 'anotheralias': {'alias': 'anotheralias', 'sql': 'select * from testsql', 'mysql_host': 'test.com.au', 'mysql_database': 'testdb'}}
+        selected_alias = 'testalias'
+        response = missing_alias_message(queries, selected_alias)
+        self.assertEqual(json.loads(response['body'])['text'], "The alias `{}` doesn't exist. Here are the available aliases you may call:".format(selected_alias))
+
+        attachments = json.loads(response['body'])['attachments']
+
+        self.assertTrue(attachments)
+
+        fields = [x["fields"] for x in attachments]
+        logging.debug(json.dumps({'fields': fields, 'action': 'logging fields'}))
+        titles = [x["title"] for x in fields[0]]
+        logging.debug(json.dumps({'titles': titles, 'action': 'logging titles'}))
+        values = [x["value"] for x in fields[0]]
+        logging.debug(json.dumps({'values': values, 'action': 'logging values'}))
+
+        self.assertTrue("Alias" in titles)
+        self.assertTrue("test.com.au" in str(values))
+
+
 
 if __name__ == '__main__':
     main()

@@ -1,21 +1,17 @@
 queries:
-  -
-    alias: getstats
+  getstats:
     sql: 'SELECT * FROM sometable;'
     mysql_host: 127.0.0.1
     mysql_database: somedb
-  -
-    alias: getbilling
+  getbilling:
     sql: 'SELECT * FROM billingtable;'
     mysql_host: 127.0.0.1
     mysql_database: somedb
-  -
-    alias: getemployees
+  getemployees:
     sql: 'SELECT * FROM address LIMIT 5;'
-    mysql_host: db
+    mysql_host: dope-1465-slack-cluster-1.cluster-cogs0mbjxfs6.ap-southeast-2.rds.amazonaws.com
     mysql_database: sakila
-  -
-    alias: invalidquery
+  invalidquery:
     sql: foobar
     mysql_host: db
     mysql_database: sakila

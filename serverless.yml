@@ -1,13 +1,33 @@
-#plugins:
-#  - serverless-log-forwarding
+plugins:
+  - serverless-log-forwarding
+  - serverless-plugin-aws-alerts
 
 custom:
   pythonRequirements:
     dockerizePip: false
   logForwarding:
     destinationARN: {"Fn::ImportValue": "${env:SUMOLOGIC_LAMBDA_ARN_EXPORT_NAME}"}
+  alerts:
+    dashboards: true
+    topics:
+      ok: ${env:OPS_GENIE_CRITICAL_SNS_ARN}
+      alarm: ${env:OPS_GENIE_CRITICAL_SNS_ARN}
+      insufficientData: ${env:OPS_GENIE_MAJOR_SNS_ARN}
+    definitions:
+      functionErrors:
+        threshold: 10
+        period: 900
+      functionDuration:
+        threshold: 1000
+        statistic: 'p95'
+        period: 900
+    alarms:
+      - functionErrors
+      - functionThrottles
+      - functionInvocations
+      - functionDuration
 
-service: MV-SLS-slack-curated-sql
+service: MV-${env:REALM}-slack-curated-sql
 
 provider:
   name: aws
@@ -16,11 +36,24 @@ provider:
   memorySize: 128
   timeout: 10
   region: ${env:AWS_REGION}
-  variableSyntax: "\\${(?!AWS::)(env:[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
+  variableSyntax: "\\${(?!AWS::)((?:self|env):[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+      Resource:
+        Fn::Sub: "arn:aws:lambda:ap-southeast-2:${AWS::AccountId}:function:${self:service}-${env:ENV}-query"
   stackTags:
     FRAMEWORK: serverless
   environment:
     ENV: ${env:ENV}
+    REALM: ${env:REALM}
+    QUERY_HANDLER: ${self:service}-${env:ENV}-query
+    SLACK_TOKEN: ${env:SLACK_TOKEN}
+    LOGLEVEL: ${env:LOGLEVEL}
+    SQL_GETEMPLOYEES_USERNAME: ${env:SQL_GETEMPLOYEES_USERNAME}
+    SQL_GETEMPLOYEES_PASSWORD: ${env:SQL_GETEMPLOYEES_PASSWORD}
 
 package:
   artifact: package/package.zip
@@ -34,45 +67,59 @@ functions:
     handler: lambda.button_handler
     events:
       - http: POST button
+  query:
+    # no events, this gets invoked by button or handler
+    handler: lambda.query_handler
+    timeout: 300
+    alarms:
+      - name: functionDuration
+        threshold: 200000
+    vpc:
+      securityGroupIds:
+        - ${env:AWS_SG}
+      subnetIds:
+        - ${env:AWS_SUBNET_A}
+#        - ${env:AWS_SUBNET_B}
+#        - ${env:AWS_SUBNET_C}
 
-#resources:
-#  Resources:
-#    DomainName:
-#      Type: "AWS::ApiGateway::DomainName"
-#      Properties:
-#        CertificateArn: ${env:AWS_ACM_CERTIFICATE}
-#        DomainName: ${env:DOMAIN_NAME}
-#    BasePathMapping:
-#      Type: "AWS::ApiGateway::BasePathMapping"
-#      Properties:
-#        BasePath: "account"
-#        DomainName:
-#          Ref: DomainName
-#        RestApiId: { "Ref": "ApiGatewayRestApi" }
-#        Stage: ${env:ENV}
-#    RecordSet:
-#      Type: AWS::Route53::RecordSet
-#      Properties:
-#        HostedZoneName: ${env:AWS_HOSTED_ZONE}.
-#        Name: ${env:DOMAIN_NAME}
-#        Type: A
-#        AliasTarget:
-#          HostedZoneId: "Z2FDTNDATAQYW2"
-#          DNSName:
-#            Fn::GetAtt: [ "DomainName", "DistributionDomainName" ]
-#    RecordSetAAAA:
-#      Type: AWS::Route53::RecordSet
-#      Properties:
-#        HostedZoneName: ${env:AWS_HOSTED_ZONE}.
-#        Name: ${env:DOMAIN_NAME}
-#        Type: AAAA
-#        AliasTarget:
-#          HostedZoneId: "Z2FDTNDATAQYW2"
-#          DNSName:
-#            Fn::GetAtt: [ "DomainName", "DistributionDomainName" ]
-#  Outputs:
-#    LambdaUrl:
-#      Value: "https://${env:DOMAIN_NAME}"
-#    CloudFrontDomainName:
-#      Value:
-#        Fn::GetAtt: [ 'DomainName', 'DistributionDomainName' ]
+resources:
+  Resources:
+    DomainName:
+      Type: "AWS::ApiGateway::DomainName"
+      Properties:
+        CertificateArn: ${env:AWS_ACM_CERTIFICATE}
+        DomainName: ${env:DOMAIN_NAME}
+    BasePathMapping:
+      Type: "AWS::ApiGateway::BasePathMapping"
+      Properties:
+        BasePath: "curator"
+        DomainName:
+          Ref: DomainName
+        RestApiId: { "Ref": "ApiGatewayRestApi" }
+        Stage: ${env:ENV}
+    RecordSet:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: ${env:AWS_HOSTED_ZONE}.
+        Name: ${env:DOMAIN_NAME}
+        Type: A
+        AliasTarget:
+          HostedZoneId: "Z2FDTNDATAQYW2"
+          DNSName:
+            Fn::GetAtt: [ "DomainName", "DistributionDomainName" ]
+    RecordSetAAAA:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: ${env:AWS_HOSTED_ZONE}.
+        Name: ${env:DOMAIN_NAME}
+        Type: AAAA
+        AliasTarget:
+          HostedZoneId: "Z2FDTNDATAQYW2"
+          DNSName:
+            Fn::GetAtt: [ "DomainName", "DistributionDomainName" ]
+  Outputs:
+    LambdaUrl:
+      Value: "https://${env:DOMAIN_NAME}"
+    CloudFrontDomainName:
+      Value:
+        Fn::GetAtt: [ 'DomainName', 'DistributionDomainName' ]

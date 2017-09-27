@@ -38,10 +38,10 @@ remove: $(DOTENV_TARGET)
 unzip: $(DOTENV_TARGET) $(ARTIFACT_PATH)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _unzip
 
-styleTest: *.py .env unzip
+styleTest: *.py $(DOTENV_TARGET) unzip
 	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
-assumeRole: .env
+assumeRole: $(DOTENV_TARGET)
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
 .PHONY: build deploy smokeTest remove shell styleTest assumeRole
 

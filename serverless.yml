@@ -10,8 +10,8 @@ custom:
   alerts:
     dashboards: true
     topics:
-      ok: ${env:OPS_GENIE_CRITICAL_SNS_ARN}
-      alarm: ${env:OPS_GENIE_CRITICAL_SNS_ARN}
+      ok: ${env:OPS_GENIE_MAJOR_SNS_ARN}
+      alarm: ${env:OPS_GENIE_MAJOR_SNS_ARN}
       insufficientData: ${env:OPS_GENIE_MAJOR_SNS_ARN}
     definitions:
       functionErrors:
@@ -52,6 +52,7 @@ provider:
     QUERY_HANDLER: ${self:service}-${env:ENV}-query
     SLACK_TOKEN: ${env:SLACK_TOKEN}
     LOGLEVEL: ${env:LOGLEVEL}
+    ALIAS_YAML_FILENAME: ${env:ALIAS_YAML_FILENAME}
     SQL_GETEMPLOYEES_USERNAME: ${env:SQL_GETEMPLOYEES_USERNAME}
     SQL_GETEMPLOYEES_PASSWORD: ${env:SQL_GETEMPLOYEES_PASSWORD}
 

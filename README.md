@@ -32,5 +32,5 @@ Queries are defined in a YAML configuration file, with their SQL statement, data
 
   * AWS Lambda has a runtime limit of 5 minutes
   * The Lambda function must have network connectivity to the database
-  * Result is not formatted nicely
+  * Slack will squash the results, resize the window for proper formatting
   * Currently limited to MySQL/MariaDB databases

@@ -164,14 +164,17 @@ def handler(event, context):
 
 
 def get_config():
-    with open("example.yml") as stream:
-        try:
+    try:
+        with open(os.environ['ALIAS_YAML_FILENAME']) as stream:
             config = yaml.safe_load(stream)
-        except yaml.YAMLError:
-            logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
-            raise
-        else:
-            logging.debug(json.dumps({'action': 'load yaml', 'status': 'success', 'config': config}))
+    except yaml.YAMLError:
+        logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
+        raise
+    except KeyError:
+        logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
+        raise
+    else:
+        logging.debug(json.dumps({'action': 'load yaml', 'status': 'success', 'config': config}))
     return config
 
 
@@ -220,7 +223,12 @@ def query_handler(event, context):
 def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id):
     """Looks up a query in the configuration file, and then invokes another lambda to run the query and respond later"""
 
-    config = get_config()
+    try:
+        config = get_config()
+    except KeyError:
+        return format_response({"text": "Failed to get configuration file.".format(selected_alias)})
+    except yaml.YAMLError:
+        return format_response({"text": "Failed to load configuration file.".format(selected_alias)})
 
     try:
         query = config['queries'][selected_alias]

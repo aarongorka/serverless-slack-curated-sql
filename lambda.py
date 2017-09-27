@@ -210,34 +210,11 @@ def query_handler(event, context):
         logging.debug(json.dumps({'action': 'get correlation-id', 'status': 'success', 'correlation_id': correlation_id}))
 
     query = event['query']
-    snippet = execute_query(query)
+    snippet = run_query(query)
 
     location = event['location']
     post_snippet(snippet, location, correlation_id)
     return {"statusCode": 200}
-
-
-def execute_query(query):
-    """Executes a query, returns a response"""
-
-    selected_alias = query['alias']
-    try:
-        result = run_query(query)
-    except mysql.connector.errors.ProgrammingError:
-        logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)
-    except KeyError:
-        logging.exception(json.dumps({"action": "getting query results", "status": "failed"}))
-        return "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)
-    else:
-        logging.debug(json.dumps({"action": "getting query results", "status": "success", "result": "results are not JSON serialisable, skipping"}))
-
-    try:
-        formatted = format_table(result)
-    except:
-        logging.exception(json.dumps({"action": "formatting as table", "status": "failed"}))
-        return "Formatting the query results failed."
-    return formatted
 
 
 def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id):
@@ -353,13 +330,13 @@ def run_query(query):
             logging.info(json.dumps({"action": "connect to mysql", "status": "failed", "attempts": attempts, "elapsed": elapsed}))
             if elapsed > 10 or attempts > 10:
                 logging.exception("Failed to connect to MySQL database")
-                raise
+                return "Could not connect to {}.".format(query['mysql_host'])
             attempts += 1
             time.sleep(1)
         except KeyError:
             cnx.close()
             logging.exception(json.dumps({'action': 'connect to mysql', 'status': 'failed', 'credentials': 'absent'}))
-            raise
+            return "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)
 
     try:
         start = timer()
@@ -369,6 +346,7 @@ def run_query(query):
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))
+        return "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)
         raise
     else:
         elapsed = timer() - start
@@ -376,7 +354,12 @@ def run_query(query):
     finally:
         cnx.close()
 
-    return result
+    try:
+        formatted = format_table(result)
+    except:
+        logging.exception(json.dumps({"action": "formatting as table", "status": "failed"}))
+        return "Formatting the query results failed."
+    return formatted
 
 
 def format_response(body):

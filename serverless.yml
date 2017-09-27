@@ -79,8 +79,8 @@ functions:
         - ${env:AWS_SG}
       subnetIds:
         - ${env:AWS_SUBNET_A}
-#        - ${env:AWS_SUBNET_B}
-#        - ${env:AWS_SUBNET_C}
+        - ${env:AWS_SUBNET_B}
+        - ${env:AWS_SUBNET_C}
 
 resources:
   Resources:

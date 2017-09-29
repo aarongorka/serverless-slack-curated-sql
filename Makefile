@@ -28,8 +28,8 @@ build: $(DOTENV_TARGET)
 deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deploy
 
-unitTest: $(ASSUME_REQUIRED) *.py $(DOTENV_TARGET) unzip run/lambda.py run/example.yml 
-	docker-compose run test
+unitTest: $(ASSUME_REQUIRED) $(DOTENV_TARGET)
+	docker-compose run $(USER_SETTINGS) --rm make _test
 
 smokeTest: $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest
@@ -40,13 +40,14 @@ remove: $(DOTENV_TARGET)
 unzip: $(DOTENV_TARGET) $(ARTIFACT_PATH)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _unzip
 
-styleTest: *.py $(DOTENV_TARGET) unzip
+styleTest: $(DOTENV_TARGET)
+	docker-compose run $(USER_SETTINGS) --rm virtualenv make _unzip
 	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
 assumeRole: $(DOTENV_TARGET)
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
 
-test: $(DOTENV_TARGET) unitTest styleTest
+test: $(DOTENV_TARGET) styleTest
 
 shell: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv sh

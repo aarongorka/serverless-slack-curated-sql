@@ -21,9 +21,9 @@ endif
 ################
 
 build: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _build
+	docker-compose run $(USER_SETTINGS) --rm serverless make _deps
 
-deploy: run $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
+deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
 
 unitTest: $(ASSUME_REQUIRED) *.py $(DOTENV_TARGET) unzip run/lambda.py run/example.yml 
@@ -43,17 +43,14 @@ styleTest: *.py $(DOTENV_TARGET) unzip
 
 assumeRole: $(DOTENV_TARGET)
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
-.PHONY: build deploy smokeTest remove shell styleTest assumeRole
 
 test: $(DOTENV_TARGET) unitTest styleTest
-.PHONY: test
 
 shell: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv sh
 
 deps: _requirements
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _requirements
-.PHONY: deps
 
 ##########
 # Others #
@@ -104,14 +101,15 @@ run/.lastrun: $(ARTIFACT_PATH)
 _run: run/.lastrun
 
 # Install node_modules for serverless plugins
-_deps: node_modules
-.PHONY: _deps
+_deps: node_modules.zip
 
-node_modules: package.json
-	# work around due to https://github.com/yarnpkg/yarn/issues/1961
-	yarn --no-bin-links
+node_modules.zip:
+	yarn install --no-bin-links
+	zip -rq node_modules.zip node_modules/
 
-_deploy: $(ARTIFACT_PATH)
+_deploy: $(ARTIFACT_PATH) node_modules.zip
+	mkdir -p node_modules
+	unzip -qo -d . node_modules.zip
 	rm -fr .serverless
 	sls deploy -v
 
@@ -120,5 +118,5 @@ _remove:
 	rm -fr .serverless
 
 _clean:
-	rm -fr node_modules .serverless package .requirements venv/
+	rm -fr node_modules.zip node_modules .serverless package .requirements venv/ run/ __pycache__/
 .PHONY: _deploy _remove _clean

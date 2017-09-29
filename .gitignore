@@ -25,6 +25,7 @@ venv/
 .requirements/
 package/
 run/
+node_modules.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

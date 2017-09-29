@@ -19,12 +19,14 @@ endif
 ################
 # Entry Points #
 ################
-
-build: $(DOTENV_TARGET)
+deps: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps
 
+build: $(DOTENV_TARGET)
+	docker-compose run $(USER_SETTINGS) --rm serverless make _build
+
 deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _deploy
+	docker-compose run $(USER_SETTINGS) --rm serverless make _deploy
 
 unitTest: $(ASSUME_REQUIRED) *.py $(DOTENV_TARGET) unzip run/lambda.py run/example.yml 
 	docker-compose run test
@@ -79,6 +81,8 @@ $(DOTENV):
 $(PACKAGE_DIR)/.piprun: requirements.txt
 	pip install -r requirements.txt -t $(PACKAGE_DIR)
 	@touch "$(PACKAGE_DIR)/.piprun"
+
+_build: $(ARTIFACT_PATH)
 
 $(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/.piprun
 	cp lambda.py $(PACKAGE_DIR)

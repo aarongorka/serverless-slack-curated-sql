@@ -45,10 +45,6 @@ services:
       options:
         gelf-address: "udp://127.0.0.1:12201"
   virtualenv:
-    depends_on:
-      - db
-    links:
-      - db:db
     image: lambci/lambda:build-python3.6
     env_file: .env
     working_dir: /usr/src/app

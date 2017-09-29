@@ -23,7 +23,7 @@ deps: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deps
 
 build: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _build
+	docker-compose run $(USER_SETTINGS) --rm virtualenv make _build
 
 deploy: $(ENV_RM_REQUIRED) $(ARTIFACT_PATH) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deploy
@@ -50,9 +50,6 @@ test: $(DOTENV_TARGET) unitTest styleTest
 
 shell: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv sh
-
-deps: _requirements
-	docker-compose run $(USER_SETTINGS) --rm virtualenv make _requirements
 
 ##########
 # Others #

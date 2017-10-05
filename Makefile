@@ -25,7 +25,7 @@ deps: $(DOTENV_TARGET)
 build: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm virtualenv make _build
 
-deploy: $(ENV_RM_REQUIRED) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
+deploy: $(ENV_RM_REQUIRED) $(DOTENV_TARGET) $(ASSUME_REQUIRED) node_modules.zip $(ARTIFACT_PATH)
 	docker-compose run $(USER_SETTINGS) --rm serverless make _deploy
 
 unitTest: $(ASSUME_REQUIRED) $(DOTENV_TARGET)
@@ -108,7 +108,7 @@ node_modules.zip:
 	yarn install --no-bin-links
 	zip -rq node_modules.zip node_modules/
 
-_deploy: $(ARTIFACT_PATH) node_modules.zip
+_deploy:
 	mkdir -p node_modules
 	unzip -qo -d . node_modules.zip
 	rm -fr .serverless

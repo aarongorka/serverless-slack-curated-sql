@@ -79,11 +79,9 @@ $(DOTENV):
 _pip: requirements.txt
 	pip install -r requirements.txt -t $(PACKAGE_DIR)
 
-_build: $(ARTIFACT_PATH)
-
-$(ARTIFACT_PATH): $(DOTENV_TARGET) _pip
+_build: _pip
 	cp lambda.py $(PACKAGE_DIR)
-	cp example.yml $(PACKAGE_DIR)
+	cp $(ALIAS_YAML_FILENAME) $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
 run/example.yml: run/lambda.py

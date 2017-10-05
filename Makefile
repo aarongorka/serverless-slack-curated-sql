@@ -81,7 +81,7 @@ _pip: requirements.txt
 
 _build: _pip
 	cp lambda.py $(PACKAGE_DIR)
-	cp $(ALIAS_YAML_FILENAME) $(PACKAGE_DIR)
+	cp *.yml $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
 run/example.yml: run/lambda.py

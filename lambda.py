@@ -165,12 +165,9 @@ def handler(event, context):
 
 def get_config():
     try:
-        with open(os.environ.get('ALIAS_YAML_FILENAME'), 'example.yml') as stream:
+        with open(os.environ.get('ALIAS_YAML_FILENAME', 'example.yml')) as stream:
             config = yaml.safe_load(stream)
-    except yaml.YAMLError:
-        logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
-        raise
-    except KeyError:
+    except (yaml.YAMLError, KeyError, TypeError):
         logging.exception(json.dumps({'action': 'load yaml', 'status': 'failed'}))
         raise
     else:

@@ -76,13 +76,12 @@ $(DOTENV):
 	cp $(DOTENV) .env
 .PHONY: $(DOTENV)
 
-$(PACKAGE_DIR)/.piprun: requirements.txt
+_pip: requirements.txt
 	pip install -r requirements.txt -t $(PACKAGE_DIR)
-	@touch "$(PACKAGE_DIR)/.piprun"
 
 _build: $(ARTIFACT_PATH)
 
-$(ARTIFACT_PATH): $(DOTENV_TARGET) *.py example.yml $(PACKAGE_DIR)/.piprun
+$(ARTIFACT_PATH): $(DOTENV_TARGET) _pip
 	cp lambda.py $(PACKAGE_DIR)
 	cp example.yml $(PACKAGE_DIR)
 	cd $(PACKAGE_DIR) && zip -rq ../package .

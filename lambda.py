@@ -149,7 +149,7 @@ def handler(event, context):
     location = body['channel_id']
     try:
         response = lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id)
-    except:
+    except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
             "body": json.dumps({"text": "Failed to execute MySQL query"}),

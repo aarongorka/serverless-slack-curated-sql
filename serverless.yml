@@ -89,6 +89,7 @@ resources:
     LambdaSG:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
+        GroupName: "${self:service}-SecurityGroup-${env:ENV}"
         GroupDescription: "${self:service}-${env:ENV} SG for access to databases"
         VpcId: ${env:AWS_VPC_ID}
     RDSSecurityGroupIngress:

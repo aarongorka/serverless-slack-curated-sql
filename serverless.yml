@@ -35,6 +35,7 @@ provider:
   stage: ${env:ENV}
   memorySize: 128
   timeout: 10
+  versionFunctions: false
   region: ${env:AWS_REGION}
   variableSyntax: "\\${(?!AWS::)((?:self|env):[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
   iamRoleStatements:
@@ -77,7 +78,7 @@ functions:
         threshold: 200000
     vpc:
       securityGroupIds:
-        - ${env:AWS_SG}
+        - Ref: LambdaSG
       subnetIds:
         - ${env:AWS_SUBNET_A}
         - ${env:AWS_SUBNET_B}
@@ -85,6 +86,16 @@ functions:
 
 resources:
   Resources:
+    LambdaSG:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+        GroupDescription: "${self:service}-${env:ENV} SG for access to databases"
+        VpcId: ${env:AWS_VPC_ID}
+    RDSSecurityGroupIngress:
+      Type: "AWS::EC2::SecurityGroupIngress"
+      Properties:
+        SourceSecurityGroupId: Fn:GetAtt [ "LambdaSG", "GroupId" ]
+        GroupId: "${env:RDS_SG_ID}"
     DomainName:
       Type: "AWS::ApiGateway::DomainName"
       Properties:

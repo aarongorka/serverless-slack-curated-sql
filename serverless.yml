@@ -95,7 +95,7 @@ resources:
       Type: "AWS::EC2::SecurityGroupIngress"
       Properties:
         SourceSecurityGroupId: Fn:GetAtt [ "LambdaSG", "GroupId" ]
-        GroupId: "${env:RDS_SG_ID}"
+        GroupId: "${env:AWS_RDS_SG}"
     DomainName:
       Type: "AWS::ApiGateway::DomainName"
       Properties:

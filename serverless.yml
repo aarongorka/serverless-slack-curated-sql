@@ -96,6 +96,9 @@ resources:
       Properties:
         SourceSecurityGroupId: Fn:GetAtt [ "LambdaSG", "GroupId" ]
         GroupId: "${env:AWS_RDS_SG}"
+        IpProtocol: "tcp"
+        FromPort: 3306
+        ToPort: 3306
     DomainName:
       Type: "AWS::ApiGateway::DomainName"
       Properties:

@@ -94,7 +94,7 @@ resources:
     RDSSecurityGroupIngress:
       Type: "AWS::EC2::SecurityGroupIngress"
       Properties:
-        SourceSecurityGroupId: Fn:GetAtt [ "LambdaSG", "GroupId" ]
+        SourceSecurityGroupId: Fn::GetAtt [ "LambdaSG", "GroupId" ]
         GroupId: "${env:AWS_RDS_SG}"
         IpProtocol: "tcp"
         FromPort: 3306

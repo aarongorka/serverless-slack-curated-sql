@@ -45,7 +45,7 @@ styleTest: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore E501 *.py
 
 assumeRole: $(DOTENV_TARGET)
-	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.1 assume-role.sh >> .env
+	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.3 assume-role.sh >> .env
 
 test: $(DOTENV_TARGET) styleTest
 

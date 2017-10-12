@@ -355,7 +355,7 @@ def run_query(query):
         raise
     else:
         elapsed = timer() - start
-        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed, 'query': query['sql']}))
+        logging.info(json.dumps({'action': 'running query', 'status': 'success', "elapsed": elapsed, 'query': query['sql'], 'result': '{}'.format(result)}))
     finally:
         cnx.close()
 

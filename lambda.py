@@ -51,6 +51,8 @@ def button_handler(event, context):
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
         response = {
             "statusCode": 503,
+            "response_type": "in_channel",
+            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -67,13 +69,16 @@ def button_handler(event, context):
     else:
         logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
+    user = payload['user']['name']
     location = payload['channel']['id']
     try:
-        response = lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id)
+        response = lookup_alias_and_invoke_query_handler(selected_alias, user, location, correlation_id)
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
             "body": json.dumps({"text": "Failed to execute MySQL query"}),
+            "response_type": "in_channel",
+            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -123,6 +128,8 @@ def handler(event, context):
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
         response = {
             "statusCode": 503,
+            "response_type": "in_channel",
+            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -138,6 +145,8 @@ def handler(event, context):
         response = {
             "statusCode": 200,
             "body": json.dumps({"text": "Failed to validate user's selected alias"}),
+            "response_type": "in_channel",
+            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -146,13 +155,16 @@ def handler(event, context):
     else:
         logging.info(json.dumps({'action': 'get selected_alias', 'status': 'success', 'selected_alias': selected_alias}))
 
+    user = body['user_name']
     location = body['channel_id']
     try:
-        response = lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id)
+        response = lookup_alias_and_invoke_query_handler(selected_alias, user, location, correlation_id)
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
             "body": json.dumps({"text": "Failed to execute MySQL query"}),
+            "response_type": "in_channel",
+            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -217,7 +229,7 @@ def query_handler(event, context):
     return {"statusCode": 200}
 
 
-def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_id):
+def lookup_alias_and_invoke_query_handler(selected_alias, user, location, correlation_id):
     """Looks up a query in the configuration file, and then invokes another lambda to run the query and respond later"""
 
     try:
@@ -250,7 +262,7 @@ def lookup_alias_and_invoke_query_handler(selected_alias, location, correlation_
     except:
         raise
 
-    response = format_response({"text": "Query in progress..."})
+    response = format_response({"text": "{} has requested execution of {}, executing now...".format(user, selected_alias)})
 
     return response
 
@@ -372,6 +384,7 @@ def format_response(body):
 
     response = {
         "statusCode": 200,
+        "replace_original": False,
         "body": json.dumps(body),
         'headers': {
             'Content-Type': 'application/json',
@@ -460,6 +473,7 @@ def format_query_result(result, query):
 
     body = {
         "response_type": "in_channel",
+        "replace_original": False,
         "attachments": attachments
     }
     response = format_response(body)

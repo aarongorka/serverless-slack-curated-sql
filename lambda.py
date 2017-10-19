@@ -358,7 +358,7 @@ def run_query(query):
     try:
         start = timer()
         cur = cnx.cursor(buffered=True, dictionary=True)
-        cur.execute(query['sql'])
+        cur.execute(query['sql'], multi=True)
         result = cur.fetchall()
     except:
         elapsed = timer() - start

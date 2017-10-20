@@ -357,7 +357,7 @@ def run_query(query):
         except KeyError:
             cnx.close()
             logging.exception(json.dumps({'action': 'connect to mysql', 'status': 'failed', 'credentials': 'absent'}))
-            return "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(selected_alias)
+            return "The SQL query (alias: {}) failed, are the credentials for this query configured?".format(query['alias'])
 
     try:
         start = timer()
@@ -369,7 +369,7 @@ def run_query(query):
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))
-        return "The SQL query (alias: {}) failed, please check the logs for more information".format(selected_alias)
+        return "The SQL query (alias: {}) failed, please check the logs for more information".format(query['alias'])
         raise
     else:
         elapsed = timer() - start

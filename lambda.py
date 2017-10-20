@@ -76,9 +76,11 @@ def button_handler(event, context):
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
-            "body": json.dumps({"text": "Failed to execute MySQL query"}),
-            "response_type": "in_channel",
-            "replace_original": False,
+            "body": json.dumps({
+                "response_type": "in_channel",
+                "replace_original": False,
+                "text": "Failed to execute MySQL query"
+            }),
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -128,8 +130,6 @@ def handler(event, context):
         logging.exception(json.dumps({"action": "get correlation-id", "status": "failed"}))
         response = {
             "statusCode": 503,
-            "response_type": "in_channel",
-            "replace_original": False,
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -144,9 +144,11 @@ def handler(event, context):
         logging.exception(json.dumps({'action': 'get selected_alias', 'status': 'failed'}))
         response = {
             "statusCode": 200,
-            "body": json.dumps({"text": "Failed to validate user's selected alias"}),
-            "response_type": "in_channel",
-            "replace_original": False,
+            "body": json.dumps({
+                "response_type": "in_channel",
+                "replace_original": False,
+                "text": "Failed to validate user's selected alias"
+            }),
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -162,9 +164,11 @@ def handler(event, context):
     except mysql.connector.errors.InterfaceError:
         response = {
             "statusCode": 200,
-            "body": json.dumps({"text": "Failed to execute MySQL query"}),
-            "response_type": "in_channel",
-            "replace_original": False,
+            "body": json.dumps({
+                "response_type": "in_channel",
+                "replace_original": False,
+                "text": "Failed to execute MySQL query"
+            }),
             'headers': {
                 'Content-Type': 'application/json',
             }
@@ -384,7 +388,6 @@ def format_response(body):
 
     response = {
         "statusCode": 200,
-        "replace_original": False,
         "body": json.dumps(body),
         'headers': {
             'Content-Type': 'application/json',

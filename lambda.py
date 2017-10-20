@@ -365,7 +365,7 @@ def run_query(query):
         iterable = cur.execute(query['sql'], multi=True)
         result = []
         for item in iterable:
-            result += cur.fetchall()
+            result += item.fetchall()
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))

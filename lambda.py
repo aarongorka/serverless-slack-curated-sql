@@ -362,8 +362,10 @@ def run_query(query):
     try:
         start = timer()
         cur = cnx.cursor(buffered=True, dictionary=True)
-        cur.execute(query['sql'], multi=True)
-        result = cur.fetchall()
+        iterable = cur.execute(query['sql'], multi=True)
+        result = []
+        for item in iterable:
+            result += cur.fetchall()
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))

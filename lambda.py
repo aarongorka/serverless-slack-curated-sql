@@ -365,7 +365,10 @@ def run_query(query):
         iterable = cur.execute(query['sql'], multi=True)
         result = []
         for item in iterable:
-            result += item.fetchall()
+            try:
+                result += item.fetchall()
+            except mysql.connector.errors.InterfaceError:
+                pass
     except:
         elapsed = timer() - start
         logging.exception(json.dumps({'action': 'running query', 'status': 'failed', "elapsed": elapsed, 'query': query['sql']}))
